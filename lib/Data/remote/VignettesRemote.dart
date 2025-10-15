@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:meubcars/Core/api/api_consumer.dart';
+import 'package:meubcars/core/api/api_consumer.dart';
 import 'package:meubcars/Data/Dtos/VignetteDto.dart';
 
 class VignettesRemote {

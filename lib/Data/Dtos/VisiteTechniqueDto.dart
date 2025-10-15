@@ -2,7 +2,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:meubcars/Core/Cache/cacheHelper.dart';
+import 'package:meubcars/core/cache/cacheHelper.dart';
 import 'package:meubcars/core/api/endpoints.dart';
 
 class VisiteTechniqueDto {

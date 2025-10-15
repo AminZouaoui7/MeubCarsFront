@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:meubcars/utils/AppBar.dart';
 import 'package:meubcars/utils/AppSideMenu.dart';
-import 'package:meubcars/Core/Cache/cacheHelper.dart';
+import 'package:meubcars/core/cache/cacheHelper.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});

@@ -21,7 +21,6 @@ class _HomeState extends State<Home> {
   late final AuthRepository _repo = AuthRepository(AuthRemote());
   late Future<UserModel?> _userF;
 
-  // 🔴 manquait: futur pour le badge "Paiements"
   late Future<int> _nbPaiementsF;
 
   @override

@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:meubcars/Core/Cache/cacheHelper.dart';
-import 'package:meubcars/Core/api/api_consumer.dart';
-import 'package:meubcars/Core/api/endpoints.dart';
+import 'package:meubcars/core/cache/cacheHelper.dart';
+import 'package:meubcars/core/api/api_consumer.dart';
+import 'package:meubcars/core/api/endpoints.dart';
 
 class DioConsumer implements ApiConsumer {
   final Dio dio;

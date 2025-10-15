@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import 'package:meubcars/core/api/endpoints.dart';
-import 'package:meubcars/Core/Cache/cacheHelper.dart';
+import 'package:meubcars/core/cache/cacheHelper.dart';
 
 // ================= Modèles / helpers =================
 enum MaintenanceTypeDart { vidange, panne }

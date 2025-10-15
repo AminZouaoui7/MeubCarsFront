@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:meubcars/Core/api/endpoints.dart';
+import 'package:meubcars/core/api/endpoints.dart';
 import 'package:meubcars/Data/Models/TotalDepenses.dart';
 import 'package:meubcars/utils/DonutChart.dart';
 

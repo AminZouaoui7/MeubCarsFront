@@ -71,7 +71,6 @@ class _MainLayoutState extends State<MainLayout> {
 
             final sections = AppMenu.buildDefaultSections(
               role: user?.role,
-              nbPaiementsEnRetard: badge,
               hasPaiementAlerts: () => badge > 0,
             );
 
