@@ -8,31 +8,27 @@ import 'package:meubcars/utils/AppSideMenu.dart';
 class DioConsumer implements ApiConsumer {
   final Dio dio;
   final GlobalKey<NavigatorState>? navigatorKey;
-  static GlobalKey<NavigatorState>? defaultNavigatorKey; // <— peut être fixé depuis main()
+  static GlobalKey<NavigatorState>? defaultNavigatorKey;
   bool _handlingUnauthorized = false;
 
   DioConsumer({Dio? dio, this.navigatorKey})
-      : dio = dio ??
-      Dio(
-        BaseOptions(
-          baseUrl: EndPoint.baseUrl,
-          connectTimeout: const Duration(seconds: 60),
-          receiveTimeout: const Duration(seconds: 60),
-          sendTimeout: const Duration(seconds: 60),
-        ),
-      ) {
-    // Intercepteur global
-    this.dio.interceptors.add(
+      : dio = dio ?? Dio(
+    BaseOptions(
+      baseUrl: EndPoint.baseUrl,
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 60),
+      sendTimeout: const Duration(seconds: 60),
+    ),
+  ) {
+    dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final t = await _getToken();
+          final t = _getToken(); // ✅ pas d'await
           if (t != null) options.headers['Authorization'] = 'Bearer $t';
           options.headers['Accept'] = 'application/json';
           handler.next(options);
         },
-        onResponse: (r, handler) {
-          handler.next(r);
-        },
+        onResponse: (r, handler) => handler.next(r),
         onError: (e, handler) async {
           final code = e.response?.statusCode ?? 0;
           if ((code == 401 || code == 403) && !_handlingUnauthorized) {
@@ -48,7 +44,7 @@ class DioConsumer implements ApiConsumer {
                   arguments: {'from': e.requestOptions.path},
                 );
               }
-            } catch (_) {} finally {
+            } finally {
               _handlingUnauthorized = false;
             }
           }
@@ -58,9 +54,9 @@ class DioConsumer implements ApiConsumer {
     );
   }
 
-  // ===== Helpers token/cache =====
-  Future<String?> _getToken() async {
-    final raw = await CacheHelper.getData(key: 'token');
+  // --- Token depuis SharedPreferences (synchrone)
+  String? _getToken() {
+    final raw = CacheHelper.getData(key: 'token');
     final s = (raw ?? '').toString().trim();
     if (s.isEmpty || s.toLowerCase() == 'null' || s == '0') return null;
     return s;
@@ -79,9 +75,8 @@ class DioConsumer implements ApiConsumer {
     await CacheHelper.removeData(key: 'societeId');
   }
 
-  // ===== Options helpers =====
   Future<Options> _authOnly() async {
-    final t = await _getToken();
+    final t = _getToken();
     return Options(headers: {
       if (t != null) 'Authorization': 'Bearer $t',
       'Accept': 'application/json',
@@ -95,7 +90,6 @@ class DioConsumer implements ApiConsumer {
     return base.copyWith(headers: merged);
   }
 
-  // ===== HTTP =====
   @override
   Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters}) async {
     final opts = await _authOnly();

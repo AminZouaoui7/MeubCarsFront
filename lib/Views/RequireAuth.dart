@@ -1,10 +1,9 @@
-// lib/Views/RequireAuth.dart
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:meubcars/core/cache/cacheHelper.dart';
 import 'package:meubcars/core/api/endpoints.dart';
-import 'package:meubcars/utils/AppSideMenu.dart'; // ← OK car AppRoutes est dedans
+import 'package:meubcars/utils/AppSideMenu.dart';
 
 class RequireAuth extends StatelessWidget {
   final String targetRouteName;
@@ -12,12 +11,12 @@ class RequireAuth extends StatelessWidget {
   const RequireAuth({super.key, required this.targetRouteName, required this.child});
 
   Future<bool> _isLoggedInAndValid() async {
-    // 1) lire token (⚠️ SANS await)
+    // 1) token (synchrone)
     final raw = CacheHelper.getData(key: 'token');
     final t = (raw ?? '').toString().trim();
     if (t.isEmpty || t.toLowerCase() == 'null' || t == '0') return false;
 
-    // 2) check exp JWT si possible
+    // 2) exp JWT locale
     final parts = t.split('.');
     if (parts.length == 3) {
       try {
@@ -25,17 +24,23 @@ class RequireAuth extends StatelessWidget {
         final exp = payload['exp'];
         if (exp is int) {
           final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-          if (exp <= nowSec) return false; // expiré
+          if (exp <= nowSec) return false;
         }
-      } catch (_) {/* on validera via backend */}
+      } catch (_) {}
     }
 
-    // 3) ping backend (renvoie 401 si invalide)
-    final dio = Dio(BaseOptions(baseUrl: EndPoint.baseUrl, connectTimeout: const Duration(seconds: 8)));
+    // 3) ping backend
+    final dio = Dio(BaseOptions(
+      baseUrl: EndPoint.baseUrl, // ex: https://meubcars-api.onrender.com/api/
+      connectTimeout: const Duration(seconds: 8),
+    ));
     try {
       final r = await dio.get(
-        'api/auth/me', // ← mets le vrai chemin (ex: 'api/auth/me')
-        options: Options(headers: {'Authorization': 'Bearer $t', 'Accept': 'application/json'}),
+        'Auth/me', // ✅ PAS "api/auth/me" car baseUrl finit déjà par /api/
+        options: Options(headers: {
+          'Authorization': 'Bearer $t',
+          'Accept': 'application/json',
+        }),
       );
       return r.statusCode == 200;
     } on DioException catch (e) {
