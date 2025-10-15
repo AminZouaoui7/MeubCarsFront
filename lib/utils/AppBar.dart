@@ -1,3 +1,4 @@
+import 'dart:convert'; // 👈 for decoding cached user JSON
 import 'package:flutter/material.dart';
 import 'package:meubcars/Data/Models/user_model.dart';
 import 'package:meubcars/utils/AppSideMenu.dart';
@@ -11,7 +12,7 @@ class AppBarWithMenu extends StatelessWidget implements PreferredSizeWidget {
   // Navigation
   final void Function(String route) onNavigate;
   final String homeRoute;
-  final String loginRoute; // where to go after logout
+  final String loginRoute;
 
   // Optional callbacks
   final VoidCallback? onHomePressed;
@@ -24,10 +25,10 @@ class AppBarWithMenu extends StatelessWidget implements PreferredSizeWidget {
   final UserModel? currentUser;
   final String? avatarUrl;
 
-  // ✅ Nouveau champ pour compatibilité (si tu veux juste passer un nom)
+  /// If you don’t pass this, we’ll try to read a cached name.
   final String? userName;
 
-  // Compat (not used internally)
+  // Compat
   final List<MenuSection> sections;
   final String activeRoute;
 
@@ -42,7 +43,7 @@ class AppBarWithMenu extends StatelessWidget implements PreferredSizeWidget {
     this.showHomeButton = true,
     this.currentUser,
     this.avatarUrl,
-    this.userName, // ✅ ajouté ici
+    this.userName,
     this.sections = const [],
     this.activeRoute = '',
   });
@@ -111,26 +112,43 @@ class AppBarWithMenu extends StatelessWidget implements PreferredSizeWidget {
     );
 
     try {
+      // Always clear local state even if network fails
       final repo = AuthRepository(AuthRemote());
       await repo.logout();
-    } catch (_) {
-      await CacheHelper.clearData();
     } finally {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(); // close progress
     }
 
     Navigator.of(context).pushNamedAndRemoveUntil(loginRoute, (r) => false);
   }
 
+  /// Try to get a display name:
+  /// 1) `userName` param
+  /// 2) `currentUser.nomComplet`
+  /// 3) `CacheHelper('userName')`
+  /// 4) `CacheHelper('user').nomComplet`
+  String _resolveDisplayName() {
+    if (userName != null && userName!.trim().isNotEmpty) return userName!;
+    if ((currentUser?.nomComplet ?? '').trim().isNotEmpty) return currentUser!.nomComplet;
+
+    final cachedName = CacheHelper.getData<String>(key: 'userName');
+    if (cachedName != null && cachedName.trim().isNotEmpty) return cachedName;
+
+    final raw = CacheHelper.getData<String>(key: 'user');
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final map = jsonDecode(raw) as Map<String, dynamic>;
+        final n = (map['nomComplet'] ?? '').toString().trim();
+        if (n.isNotEmpty) return n;
+      } catch (_) {}
+    }
+
+    return 'Utilisateur';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ Priorité : userName > currentUser.nomComplet > "Utilisateur"
-    final displayName = (userName != null && userName!.trim().isNotEmpty)
-        ? userName!
-        : ((currentUser?.nomComplet ?? '').trim().isNotEmpty
-        ? currentUser!.nomComplet
-        : 'Utilisateur');
-
+    final displayName = _resolveDisplayName();
     final initials = _initials(displayName);
 
     return AppBar(
@@ -207,8 +225,10 @@ class AppBarWithMenu extends StatelessWidget implements PreferredSizeWidget {
                       ? NetworkImage(avatarUrl!)
                       : null,
                   child: (avatarUrl == null || avatarUrl!.isEmpty)
-                      ? Text(initials,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))
+                      ? Text(
+                    initials,
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  )
                       : null,
                 ),
                 const SizedBox(width: 8),

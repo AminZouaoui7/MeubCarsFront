@@ -20,7 +20,7 @@ class DioConsumer implements ApiConsumer {
       sendTimeout: const Duration(seconds: 60),
     ),
   ) {
-    dio.interceptors.add(
+    dio?.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final t = _getToken(); // ✅ pas d'await

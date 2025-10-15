@@ -26,7 +26,7 @@ class AuthRepository implements IAuthRepository {
 
     UserModel? user = resp.user;
 
-    // Try to fill user if backend returned only the token
+    // If backend only returned token, try to fill user
     if (user == null) {
       try {
         final me = await remote.me(resp.token);
@@ -44,6 +44,7 @@ class AuthRepository implements IAuthRepository {
       throw const FormatException('Impossible de récupérer l’utilisateur');
     }
 
+    // Save compact JSON
     await CacheHelper.saveData(
       key: _kUserKey,
       value: jsonEncode({
@@ -57,6 +58,16 @@ class AuthRepository implements IAuthRepository {
       }),
     );
 
+    // Also save individual fields (many widgets use them)
+    await CacheHelper.saveData(key: 'userId', value: user.id);
+    await CacheHelper.saveData(key: 'userName', value: user.nomComplet ?? 'Utilisateur');
+    await CacheHelper.saveData(key: 'nomComplet', value: user.nomComplet ?? 'Utilisateur');
+    await CacheHelper.saveData(key: 'email', value: user.email ?? '');
+    await CacheHelper.saveData(key: 'telephone', value: user.telephone ?? '');
+    await CacheHelper.saveData(key: 'cin', value: user.cin ?? '');
+    await CacheHelper.saveData(key: 'role', value: user.role ?? '');
+    await CacheHelper.saveData(key: 'societeId', value: user.societeId ?? 0);
+
     return LoginResponse(token: resp.token, user: user);
   }
 
@@ -65,12 +76,21 @@ class AuthRepository implements IAuthRepository {
     final token = CacheHelper.getData<String>(key: _kTokenKey) ?? '';
     if (token.isNotEmpty) {
       try {
-        await remote.logout(token); // may return 200 or 401 (expired) -> ignore
-      } catch (_) {
-        // ignore network/server errors on logout — we'll still clear local state
-      }
+        await remote.logout(token); // ignore errors
+      } catch (_) {}
     }
-    await CacheHelper.clearData();
+
+    // Clear all local auth state
+    await CacheHelper.removeData(key: _kTokenKey);
+    await CacheHelper.removeData(key: _kUserKey);
+    await CacheHelper.removeData(key: 'userId');
+    await CacheHelper.removeData(key: 'userName');
+    await CacheHelper.removeData(key: 'nomComplet');
+    await CacheHelper.removeData(key: 'email');
+    await CacheHelper.removeData(key: 'telephone');
+    await CacheHelper.removeData(key: 'cin');
+    await CacheHelper.removeData(key: 'role');
+    await CacheHelper.removeData(key: 'societeId');
   }
 
   @override

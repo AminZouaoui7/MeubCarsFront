@@ -11,10 +11,13 @@ class RequireAuth extends StatelessWidget {
   const RequireAuth({super.key, required this.targetRouteName, required this.child});
 
   Future<bool> _isLoggedInAndValid() async {
-    // 1) token (synchrone)
+    // 1) token
     final raw = CacheHelper.getData(key: 'token');
     final t = (raw ?? '').toString().trim();
-    if (t.isEmpty || t.toLowerCase() == 'null' || t == '0') return false;
+    if (t.isEmpty || t.toLowerCase() == 'null' || t == '0') {
+      debugPrint('🔒 RequireAuth: pas de token');
+      return false;
+    }
 
     // 2) exp JWT locale
     final parts = t.split('.');
@@ -24,9 +27,14 @@ class RequireAuth extends StatelessWidget {
         final exp = payload['exp'];
         if (exp is int) {
           final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-          if (exp <= nowSec) return false;
+          if (exp <= nowSec) {
+            debugPrint('🔒 RequireAuth: token expiré localement');
+            return false;
+          }
         }
-      } catch (_) {}
+      } catch (_) {
+        // ignore -> on validera via backend
+      }
     }
 
     // 3) ping backend
@@ -35,19 +43,20 @@ class RequireAuth extends StatelessWidget {
       connectTimeout: const Duration(seconds: 8),
     ));
     try {
+      debugPrint('🔒 RequireAuth: ping ${EndPoint.baseUrl}auth/me');
       final r = await dio.get(
-        'Auth/me', // ✅ PAS "api/auth/me" car baseUrl finit déjà par /api/
-        options: Options(headers: {
-          'Authorization': 'Bearer $t',
-          'Accept': 'application/json',
-        }),
+        'auth/me', // ✅ minuscule
+        options: Options(headers: {'Authorization': 'Bearer $t', 'Accept': 'application/json'}),
       );
+      debugPrint('🔒 RequireAuth: status=${r.statusCode}');
       return r.statusCode == 200;
     } on DioException catch (e) {
       final sc = e.response?.statusCode ?? 0;
+      debugPrint('🔒 RequireAuth: DioException status=$sc ${e.message}');
       if (sc == 401 || sc == 403) return false;
       return false;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('🔒 RequireAuth: erreur $e');
       return false;
     }
   }
