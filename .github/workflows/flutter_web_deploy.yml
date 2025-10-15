@@ -25,8 +25,11 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Build Flutter Web
-        run: flutter build web --release
+      - name: 🔨 Build Flutter Web
+        run: |
+          flutter config --no-analytics
+          flutter pub get
+          flutter build web --release --no-tree-shake-icons --web-renderer canvaskit --dart-define=FLUTTER_WEB_USE_SKIA=true
 
       - name: Deploy to deploy branch
         run: |
