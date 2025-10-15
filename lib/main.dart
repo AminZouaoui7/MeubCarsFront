@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:meubcars/Views/RequireAuth.dart';
 
 import 'package:meubcars/core/cache/cacheHelper.dart';
 import 'package:meubcars/core/api/dio_consumer.dart';
@@ -94,62 +95,98 @@ class MeubCarsApp extends StatelessWidget {
       ),
 
       initialRoute: '/',
-      routes: {
-        // Splash first
-        '/': (_) => const SplashScreen(),
+        routes: {
+          // --- Public ---
+          '/': (_) => const SplashScreen(),
+          AppRoutes.login:   (_) => const LoginPage(),
 
-        // Auth
-        AppRoutes.login:   (_) => const LoginPage(),   // 👈 add this
-        AppRoutes.profile: (_) => const ProfilePage(),
-        AppRoutes.settings: (_) => const SettingsPage(),
+          // (option) si tu veux que Profile/Settings soient protégés, laisse-les en RequireAuth
+          // sinon remets-les en accès direct.
+          AppRoutes.profile: (_) => const ProfilePage(),
+          AppRoutes.settings: (_) => const SettingsPage(),
 
-        // Home
-        AppRoutes.home: (_) => const Home(),
+          // --- Protégé ---
+          AppRoutes.home: (_) => RequireAuth(
+            targetRouteName: AppRoutes.home,
+            child: const Home(),
+          ),
 
-        // ===== Voitures =====
-        AppRoutes.voituresList: (_) =>
-            _wrap('Liste des voitures', AppRoutes.voituresList, const Listevoitures()),
-        AppRoutes.voituresAdd: (_) =>
-            _wrap('Ajouter voiture', AppRoutes.voituresAdd, const AjoutervoiturePage()),
-        AppRoutes.voituresFluxAdd: (_) =>
-            _wrap('Créer un flux', AppRoutes.voituresFluxAdd, const Creerflux()),
-        AppRoutes.voitureDetails: (_) =>
-            _wrap('Détails voiture', AppRoutes.voituresList, const CarDetailsPage()),
-        AppRoutes.voituresEdit: (_) =>
-            _wrap('Modifier voiture', AppRoutes.voituresList, const VoitureEditPage()),
-        AppRoutes.voituresFrais: (_) =>
-            _wrap('Liste des frais', AppRoutes.voituresFrais, const FraisVoiturePage()),
+          // ===== Voitures =====
+          AppRoutes.voituresList: (_) => RequireAuth(
+            targetRouteName: AppRoutes.voituresList,
+            child: _wrap('Liste des voitures', AppRoutes.voituresList, const Listevoitures()),
+          ),
+          AppRoutes.voituresAdd: (_) => RequireAuth(
+            targetRouteName: AppRoutes.voituresAdd,
+            child: _wrap('Ajouter voiture', AppRoutes.voituresAdd, const AjoutervoiturePage()),
+          ),
+          AppRoutes.voituresFluxAdd: (_) => RequireAuth(
+            targetRouteName: AppRoutes.voituresFluxAdd,
+            child: _wrap('Créer un flux', AppRoutes.voituresFluxAdd, const Creerflux()),
+          ),
+          AppRoutes.voitureDetails: (_) => RequireAuth(
+            targetRouteName: AppRoutes.voitureDetails,
+            child: _wrap('Détails voiture', AppRoutes.voituresList, const CarDetailsPage()),
+          ),
+          AppRoutes.voituresEdit: (_) => RequireAuth(
+            targetRouteName: AppRoutes.voituresEdit,
+            child: _wrap('Modifier voiture', AppRoutes.voituresList, const VoitureEditPage()),
+          ),
+          AppRoutes.voituresFrais: (_) => RequireAuth(
+            targetRouteName: AppRoutes.voituresFrais,
+            child: _wrap('Liste des frais', AppRoutes.voituresFrais, const FraisVoiturePage()),
+          ),
 
-        // ===== Paiements =====
-     //   AppRoutes.paiements: (_) => const Paiementsmois(),
-        AppRoutes.paiementsHistory: (_) => const PaiementsHistoryPage(),
+          // ===== Paiements =====
+          // AppRoutes.paiements: (...) si tu la réactives
+          AppRoutes.paiementsHistory: (_) => RequireAuth(
+            targetRouteName: AppRoutes.paiementsHistory,
+            child: const PaiementsHistoryPage(),
+          ),
 
-        // ===== Chauffeurs =====
-        AppRoutes.chauffeursList: (_) =>
-            _wrap('Liste des chauffeurs', AppRoutes.chauffeursList, const ListeChauffeursPage()),
-        AppRoutes.chauffeursAdd: (_) => const ChauffeursAddPage(),
+          // ===== Chauffeurs =====
+          AppRoutes.chauffeursList: (_) => RequireAuth(
+            targetRouteName: AppRoutes.chauffeursList,
+            child: _wrap('Liste des chauffeurs', AppRoutes.chauffeursList, const ListeChauffeursPage()),
+          ),
+          AppRoutes.chauffeursAdd: (_) => RequireAuth(
+            targetRouteName: AppRoutes.chauffeursAdd,
+            child: const ChauffeursAddPage(),
+          ),
 
-        // ===== Sociétés =====
-        AppRoutes.societesList: (_) =>
-            _wrap('Liste des sociétés', AppRoutes.societesList, const Listesocietes()),
-        AppRoutes.societesAdd: (_) =>
-            _wrap('Ajouter société', AppRoutes.societesAdd, const Ajoutersociete()),
+          // ===== Sociétés =====
+          AppRoutes.societesList: (_) => RequireAuth(
+            targetRouteName: AppRoutes.societesList,
+            child: _wrap('Liste des sociétés', AppRoutes.societesList, const Listesocietes()),
+          ),
+          AppRoutes.societesAdd: (_) => RequireAuth(
+            targetRouteName: AppRoutes.societesAdd,
+            child: const Ajoutersociete(),
+          ),
 
-        // ===== Flux transport =====
-        AppRoutes.voituresFluxDetail: (_) => const FluxDetailPage(),
+          // ===== Flux transport =====
+          AppRoutes.voituresFluxDetail: (_) => RequireAuth(
+            targetRouteName: AppRoutes.voituresFluxDetail,
+            child: const FluxDetailPage(),
+          ),
 
-        // ===== Missions =====
-        AppRoutes.missionsCreate: (_) =>
-            _wrap('Nouvel ordre de mission', AppRoutes.missionsCreate, const OrdreMissionFormPage()),
-        // AppRoutes.missionsList: (_) =>
-        //     _wrap('Liste des missions', AppRoutes.missionsList, const MissionsListPage()),
+          // ===== Missions =====
+          AppRoutes.missionsCreate: (_) => RequireAuth(
+            targetRouteName: AppRoutes.missionsCreate,
+            child: _wrap('Nouvel ordre de mission', AppRoutes.missionsCreate, const OrdreMissionFormPage()),
+          ),
+          // AppRoutes.missionsList: (_) => RequireAuth(...),
 
-        AppRoutes.superAdminAddAdmin: (_) => const AddAdminPage(),
-
-        AppRoutes.superDocordremision: (_) => const Docordremision(),
-
-
-      },
+          // ===== Super Admin =====
+          AppRoutes.superAdminAddAdmin: (_) => RequireAuth(
+            targetRouteName: AppRoutes.superAdminAddAdmin,
+            child: const AddAdminPage(),
+          ),
+          AppRoutes.superDocordremision: (_) => RequireAuth(
+            targetRouteName: AppRoutes.superDocordremision,
+            child: const Docordremision(),
+          ),
+        },
       onUnknownRoute: (settings) => MaterialPageRoute(
         builder: (_) => _wrap('Route inconnue', '', const SizedBox.shrink()),
       ),
@@ -430,7 +467,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
       // ✅ Save individual fields (for convenience)
       await CacheHelper.saveData(key: 'userId', value: u.id);
-      await CacheHelper.saveData(key: 'userName', value: u.nomComplet ?? 'Utilisateur'); // 👈 important
+      await CacheHelper.saveData(key: 'userName', value: u.nomComplet ?? 'Utilisateur');
       await CacheHelper.saveData(key: 'nomComplet', value: u.nomComplet ?? 'Utilisateur');
       await CacheHelper.saveData(key: 'email', value: u.email ?? '');
       await CacheHelper.saveData(key: 'telephone', value: u.telephone ?? '');
@@ -439,6 +476,30 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       await CacheHelper.saveData(key: 'societeId', value: u.societeId ?? 0);
 
       if (!mounted) return;
+
+      // 🔁 Si le guard a passé une route d’origine, on y retourne
+      String? from;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['from'] is String && (args['from'] as String).isNotEmpty) {
+        from = args['from'] as String;
+      } else if (args is String && args.isNotEmpty) {
+        from = args; // au cas où on t’a passé directement un string
+      }
+
+      if (from != null) {
+        // Sécurise un peu: évite les routes inconnues
+        try {
+          Navigator.of(context).pushReplacementNamed(from);
+        } catch (_) {
+          // fallback si la route n’existe pas dans le router actuel
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const PostLoginTransition()),
+          );
+        }
+        return;
+      }
+
+      // 🧭 Cas normal : transition post-login
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const PostLoginTransition()),
       );
