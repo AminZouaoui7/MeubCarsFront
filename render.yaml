@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: meubcars-frontend
+    env: static
+    buildCommand: flutter build web
+    staticPublishPath: build/web
+    pullRequestPreviewsEnabled: true
