@@ -1,22 +1,56 @@
+// lib/Views/RequireAuth.dart
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:meubcars/core/cache/cacheHelper.dart';
-import 'package:meubcars/utils/AppSideMenu.dart';
+import 'package:meubcars/core/api/endpoints.dart';
+import 'package:meubcars/utils/AppSideMenu.dart'; // ← OK car AppRoutes est dedans
 
 class RequireAuth extends StatelessWidget {
   final String targetRouteName;
   final Widget child;
   const RequireAuth({super.key, required this.targetRouteName, required this.child});
 
-  Future<bool> _isLoggedIn() async {
-    final raw = await CacheHelper.getData(key: 'token');
-    final s = (raw ?? '').toString().trim();
-    return s.isNotEmpty && s.toLowerCase() != 'null' && s != '0';
+  Future<bool> _isLoggedInAndValid() async {
+    // 1) lire token (⚠️ SANS await)
+    final raw = CacheHelper.getData(key: 'token');
+    final t = (raw ?? '').toString().trim();
+    if (t.isEmpty || t.toLowerCase() == 'null' || t == '0') return false;
+
+    // 2) check exp JWT si possible
+    final parts = t.split('.');
+    if (parts.length == 3) {
+      try {
+        final payload = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+        final exp = payload['exp'];
+        if (exp is int) {
+          final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          if (exp <= nowSec) return false; // expiré
+        }
+      } catch (_) {/* on validera via backend */}
+    }
+
+    // 3) ping backend (renvoie 401 si invalide)
+    final dio = Dio(BaseOptions(baseUrl: EndPoint.baseUrl, connectTimeout: const Duration(seconds: 8)));
+    try {
+      final r = await dio.get(
+        'api/auth/me', // ← mets le vrai chemin (ex: 'api/auth/me')
+        options: Options(headers: {'Authorization': 'Bearer $t', 'Accept': 'application/json'}),
+      );
+      return r.statusCode == 200;
+    } on DioException catch (e) {
+      final sc = e.response?.statusCode ?? 0;
+      if (sc == 401 || sc == 403) return false;
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: _isLoggedIn(),
+      future: _isLoggedInAndValid(),
       builder: (context, snap) {
         if (!snap.hasData) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -51,7 +85,7 @@ class RequireAuth extends StatelessWidget {
             ),
           );
         }
-        return child; // ✅ connecté → on affiche la page protégée
+        return child;
       },
     );
   }

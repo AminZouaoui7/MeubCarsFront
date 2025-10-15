@@ -46,8 +46,8 @@
   Future<void> main() async {
     WidgetsFlutterBinding.ensureInitialized();
     await CacheHelper.init();
+    DioConsumer.defaultNavigatorKey = navigatorKey;  // 👈 AJOUT
 
-    // === Locale FR pour DateFormat (évite LocaleDataException) ===
     await initializeDateFormatting('fr_FR', null);
     Intl.defaultLocale = 'fr_FR';
 
