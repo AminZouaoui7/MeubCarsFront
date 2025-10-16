@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:meubcars/core/api/http.dart';
 
 import 'package:meubcars/core/cache/cacheHelper.dart';
 import 'package:meubcars/Data/Models/user_model.dart';
@@ -31,7 +32,12 @@ class AjoutervoiturePage extends StatefulWidget {
 
 class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
   // ====== HTTP ======
-  final Dio _dio = Dio(BaseOptions(baseUrl: EndPoint.baseUrl));
+  late final Dio _dio;
+
+  Future<void> _initHttp() async {
+    _dio = buildDio(EndPoint.baseUrl); // robust dio with retry
+    await warmup(_dio);                // wake up Render/Cloudflare once
+  }
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await CacheHelper.getData(key: 'token');
@@ -325,7 +331,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
   @override
   void initState() {
     super.initState();
-    _fetchSocietes();
+    _initHttp().then((_) => _fetchSocietes());
   }
 
   Future<void> _fetchSocietes() async {
