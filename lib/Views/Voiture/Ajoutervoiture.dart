@@ -42,19 +42,44 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
     return h;
   }
 
+  // ✅ Laisse passer les 4xx pour lire le body d’erreur renvoyé par l’API
   Future<Response> _postJson(String path, Map<String, dynamic> data) async {
     final headers = await _authHeaders();
-    return _dio.post(
+    final res = await _dio.post(
       path,
       data: data,
-      options: Options(headers: {...headers, 'Content-Type': 'application/json'}),
+      options: Options(
+        headers: {...headers, 'Content-Type': 'application/json'},
+        validateStatus: (_) => true, // lire le body même si 400/409
+      ),
     );
+
+    final code = res.statusCode ?? 0;
+    if (code >= 400) {
+      final body = res.data;
+      String msg = 'Requête invalide';
+      if (body is Map) {
+        if (body['error'] != null) msg = body['error'].toString();
+        else if (body['message'] != null) msg = body['message'].toString();
+      } else if (body is String && body.trim().isNotEmpty) {
+        msg = body;
+      } else {
+        msg = 'Erreur HTTP $code';
+      }
+      throw DioException(
+        requestOptions: res.requestOptions,
+        response: res,
+        type: DioExceptionType.badResponse,
+        message: msg,
+      );
+    }
+    return res;
   }
 
   // ====== COLORS / STYLES (VISIBILITÉ BOUTONS) ======
-  static const _kBtnBg = Color(0xFF1E1E22); // léger contraste sur fond sombre
-  static const _kBtnBorder = Color(0xFFFFA143); // proche de AppColors.kOrange
-  static const _kBtnFg = Colors.white;         // texte + icône clairs
+  static const _kBtnBg = Color(0xFF1E1E22);
+  static const _kBtnBorder = Color(0xFFFFA143);
+  static const _kBtnFg = Colors.white;
 
   ButtonStyle _outlinedBtnStyle() => OutlinedButton.styleFrom(
     foregroundColor: _kBtnFg,
@@ -66,18 +91,17 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
 
   ButtonStyle _elevatedBtnStyle() => ElevatedButton.styleFrom(
     foregroundColor: Colors.black,
-    backgroundColor: _kBtnBorder, // bouton primaire très visible
+    backgroundColor: _kBtnBorder,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     elevation: 0,
   );
 
   ButtonStyle _textBtnStyle() => TextButton.styleFrom(
-    foregroundColor: _kBtnBorder, // texte orange
+    foregroundColor: _kBtnBorder,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
   );
-
   // ====== URL helpers ======
   String _apiOrigin() {
     var b = EndPoint.baseUrl;
@@ -191,6 +215,20 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
         s.contains('.png?') || s.contains('.jpg?') || s.contains('.jpeg?');
   }
 
+  // ====== Formats ======
+  String? _dateOnly(DateTime? d) => d == null ? null : d.toIso8601String().split('T').first;
+
+  // ⚠️ Ajuste l’ordre si l’enum backend diffère
+  int? _carburantCode() {
+    const map = {
+      'Essence': 0,
+      'Diesel': 1,
+      'Hybride': 2,
+      'Electrique': 3,
+    };
+    return _carburant == null ? null : map[_carburant!];
+  }
+
   // ====== Stepper state ======
   int _currentStep = 0;
   bool _busy = false;
@@ -201,10 +239,10 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
   final _formAssurance = GlobalKey<FormState>();
   final _formCarteGrise = GlobalKey<FormState>();
   final _formVignette = GlobalKey<FormState>();
-  final _formTaxe = GlobalKey<FormState>();       // NEW
+  final _formTaxe = GlobalKey<FormState>();
   final _formVisite = GlobalKey<FormState>();
 
-  // ====== Sociétés (liste depuis l'API) ======
+  // ====== Sociétés ======
   List<SocieteOption> _societes = <SocieteOption>[];
   int? _selectedSocieteId;
   bool _loadingSocietes = false;
@@ -223,7 +261,6 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
   bool _saisie = false;
   final _numInterneCtrl = TextEditingController();
   final _occupeeCtrl = TextEditingController();
-
   // ====== Assurance ======
   final _assuranceCompagnieCtrl = TextEditingController();
   final _assuranceNumeroPoliceCtrl = TextEditingController();
@@ -234,8 +271,8 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
   DateTime? _assuranceDateProchainPaiement;
   bool _assuranceTousRisques = false;
   final _assuranceNotesCtrl = TextEditingController();
-  String? _assuranceFichierUrl;   // API
-  String? _assurancePreviewUrl;   // Preview
+  String? _assuranceFichierUrl;
+  String? _assurancePreviewUrl;
 
   // ====== Carte grise ======
   final _cgNumeroCarteCtrl = TextEditingController();
@@ -261,7 +298,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
   String? _vPreviewUrl;
   final _vNotesCtrl = TextEditingController();
 
-  // ====== Taxe ======  // NEW
+  // ====== Taxe ======
   final _tLibelleCtrl = TextEditingController();
   final _tMontantCtrl = TextEditingController();
   DateTime? _tDateDebut;
@@ -312,7 +349,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
         _societes = parsed;
         if (_societes.length == 1) _selectedSocieteId = _societes.first.id;
       });
-    } catch (e) {
+    } catch (_) {
       _toast('Impossible de charger les sociétés');
     } finally {
       if (mounted) setState(() => _loadingSocietes = false);
@@ -322,38 +359,15 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
   @override
   void dispose() {
     for (final c in [
-      _matriculeCtrl,
-      _marqueCtrl,
-      _modeleCtrl,
-      _anneeCtrl,
-      _numeroChassisCtrl,
-      _kilometrageCtrl,
-      _prixAchatCtrl,
-      _assuranceCompagnieCtrl,
-      _assuranceNumeroPoliceCtrl,
-      _assuranceMontantCtrl,
-      _assuranceNotesCtrl,
-      _cgNumeroCarteCtrl,
-      _cgProprietaireCtrl,
-      _cgMontantCtrl,
-      _cgNotesCtrl,
-      _vAnneeFiscaleCtrl,
-      _vNumeroQuitanceCtrl,
-      _vMontantCtrl,
-      _vNotesCtrl,
-      _tLibelleCtrl,
-      _tMontantCtrl,
-      _tNotesCtrl,
-      _vtCentreCtrl,
-      _vtNumeroRapportCtrl,
-      _vtMontantCtrl,
-      _vtNotesCtrl,
-    ]) {
-      c.dispose();
-    }
+      _matriculeCtrl, _marqueCtrl, _modeleCtrl, _anneeCtrl, _numeroChassisCtrl,
+      _kilometrageCtrl, _prixAchatCtrl, _assuranceCompagnieCtrl, _assuranceNumeroPoliceCtrl,
+      _assuranceMontantCtrl, _assuranceNotesCtrl, _cgNumeroCarteCtrl, _cgProprietaireCtrl,
+      _cgMontantCtrl, _cgNotesCtrl, _vAnneeFiscaleCtrl, _vNumeroQuitanceCtrl, _vMontantCtrl,
+      _vNotesCtrl, _tLibelleCtrl, _tMontantCtrl, _tNotesCtrl, _vtCentreCtrl,
+      _vtNumeroRapportCtrl, _vtMontantCtrl, _vtNotesCtrl, _numInterneCtrl, _occupeeCtrl,
+    ]) { c.dispose(); }
     super.dispose();
   }
-
   // ====== NAV helpers ======
   void _closeDrawerIfOpen() {
     final s = Scaffold.maybeOf(context);
@@ -528,7 +542,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
     return ok;
   }
 
-  bool _validateTaxeRequired() { // NEW
+  bool _validateTaxeRequired() {
     final ok = _tLibelleCtrl.text.trim().isNotEmpty &&
         _tMontantCtrl.text.trim().isNotEmpty &&
         _tDateDebut != null &&
@@ -552,7 +566,6 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
     if (!ok) _toast('Remplis tous les champs de la visite technique, y compris le fichier.');
     return ok;
   }
-
   // ====== API ======
   Future<int> _postVoiture() async {
     final payload = {
@@ -562,12 +575,14 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       'modele': _modeleCtrl.text.trim(),
       'annee': int.tryParse(_anneeCtrl.text.trim()),
       'numeroChassis': _numeroChassisCtrl.text.trim(),
-      'carburant': _carburant,
+      'carburant': _carburantCode(), // entier attendu côté backend
       'kilometrage': int.tryParse(_kilometrageCtrl.text.trim()),
-      'dateAchat': _dateAchat?.toIso8601String(),
+      'dateAchat': _dateOnly(_dateAchat), // YYYY-MM-DD
       'prixAchat': double.tryParse(_prixAchatCtrl.text.trim()),
       'active': _active,
-      'saisie': _saisie, // NEW
+      'saisie': _saisie,
+      'numInterne': _numInterneCtrl.text.trim().isEmpty ? null : _numInterneCtrl.text.trim(),
+      'occupee': _occupeeCtrl.text.trim().isEmpty ? null : _occupeeCtrl.text.trim(),
     };
     final res = await _postJson('Voitures', payload);
     final id = res.data['id'] as int?;
@@ -581,11 +596,11 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       'compagnie': _assuranceCompagnieCtrl.text.trim(),
       'numeroPolice': _assuranceNumeroPoliceCtrl.text.trim(),
       'tousRisques': _assuranceTousRisques,
-      'dateDebut': _assuranceDebut?.toIso8601String(),
-      'dateFin': _assuranceFin?.toIso8601String(),
+      'dateDebut': _dateOnly(_assuranceDebut),
+      'dateFin': _dateOnly(_assuranceFin),
       'montant': double.tryParse(_assuranceMontantCtrl.text.trim()),
-      'datePaiement': _assuranceDatePaiement?.toIso8601String(),
-      'dateProchainPaiement': _assuranceDateProchainPaiement?.toIso8601String(),
+      'datePaiement': _dateOnly(_assuranceDatePaiement),
+      'dateProchainPaiement': _dateOnly(_assuranceDateProchainPaiement),
       'fichierUrl': _assuranceFichierUrl,
       'notes': _assuranceNotesCtrl.text.trim().isEmpty ? null : _assuranceNotesCtrl.text.trim(),
     };
@@ -597,11 +612,11 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       'voitureId': voitureId,
       'numeroCarte': _cgNumeroCarteCtrl.text.trim(),
       'proprietaireLegal': _cgProprietaireCtrl.text.trim(),
-      'dateDebut': _cgDateDebut?.toIso8601String(),
-      'dateFin': _cgDateFin?.toIso8601String(),
+      'dateDebut': _dateOnly(_cgDateDebut),
+      'dateFin': _dateOnly(_cgDateFin),
       'montant': double.tryParse(_cgMontantCtrl.text.trim()),
-      'datePaiement': _cgDatePaiement?.toIso8601String(),
-      'dateProchainPaiement': _cgDateProchainPaiement?.toIso8601String(),
+      'datePaiement': _dateOnly(_cgDatePaiement),
+      'dateProchainPaiement': _dateOnly(_cgDateProchainPaiement),
       'fichierUrl': _cgFichierUrl,
       'notes': _cgNotesCtrl.text.trim().isEmpty ? null : _cgNotesCtrl.text.trim(),
     };
@@ -612,27 +627,27 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
     final payload = {
       'voitureId': voitureId,
       'anneeFiscale': int.tryParse(_vAnneeFiscaleCtrl.text.trim()),
-      'numeroQuitance': _vNumeroQuitanceCtrl.text.trim(),
-      'dateDebut': _vDateDebut?.toIso8601String(),
-      'dateFin': _vDateFin?.toIso8601String(),
+      'numeroQuittance': _vNumeroQuitanceCtrl.text.trim(),
+      'dateDebut': _dateOnly(_vDateDebut),
+      'dateFin': _dateOnly(_vDateFin),
       'montant': double.tryParse(_vMontantCtrl.text.trim()),
-      'datePaiement': _vDatePaiement?.toIso8601String(),
-      'dateProchainPaiement': _vDateProchainPaiement?.toIso8601String(),
+      'datePaiement': _dateOnly(_vDatePaiement),
+      'dateProchainPaiement': _dateOnly(_vDateProchainPaiement),
       'fichierUrl': _vFichierUrl,
       'notes': _vNotesCtrl.text.trim().isEmpty ? null : _vNotesCtrl.text.trim(),
     };
     await _postJson('Vignettes', payload);
   }
 
-  Future<void> _postTaxe(int voitureId) async { // NEW
+  Future<void> _postTaxe(int voitureId) async {
     final payload = {
       'voitureId': voitureId,
       'libelle': _tLibelleCtrl.text.trim(),
       'montant': double.tryParse(_tMontantCtrl.text.trim()),
-      'dateDebut': _tDateDebut?.toIso8601String(),
-      'dateFin': _tDateFin?.toIso8601String(),
-      'datePaiement': _tDatePaiement?.toIso8601String(),
-      'dateProchainPaiement': _tDateProchainPaiement?.toIso8601String(),
+      'dateDebut': _dateOnly(_tDateDebut),
+      'dateFin': _dateOnly(_tDateFin),
+      'datePaiement': _dateOnly(_tDatePaiement),
+      'dateProchainPaiement': _dateOnly(_tDateProchainPaiement),
       'fichierUrl': _tFichierUrl,
       'notes': _tNotesCtrl.text.trim().isEmpty ? null : _tNotesCtrl.text.trim(),
     };
@@ -645,13 +660,14 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       'centre': _vtCentreCtrl.text.trim(),
       'numeroRapport': _vtNumeroRapportCtrl.text.trim(),
       'contreVisite': _vtContreVisite,
-      'dateDebut': _vtDateDebut?.toIso8601String(),
-      'dateFin': _vtDateFin?.toIso8601String(),
+      'dateDebut': _dateOnly(_vtDateDebut),
+      'dateFin': _dateOnly(_vtDateFin),
       'montant': double.tryParse(_vtMontantCtrl.text.trim()),
-      'datePaiement': _vtDatePaiement?.toIso8601String(),
-      'dateProchainPaiement': _vtDateProchainPaiement?.toIso8601String(),
+      'datePaiement': _dateOnly(_vtDatePaiement),
+      'dateProchainPaiement': _dateOnly(_vtDateProchainPaiement),
       'fichierUrl': _vtFichierUrl,
       'notes': _vtNotesCtrl.text.trim().isEmpty ? null : _vtNotesCtrl.text.trim(),
+      'libelle': 'Visite technique', // libellé simple si requis par ton VM
     };
     await _postJson('VisitesTechniques', payload);
   }
@@ -711,7 +727,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
           _toast('Vignette enregistrée');
           setState(() => _currentStep = 4); // -> Taxe
         }
-      } else if (_currentStep == 4) { // NEW: Taxe
+      } else if (_currentStep == 4) {
         if (_formTaxe.currentState!.validate() && _validateTaxeRequired()) {
           if (_voitureId == null) throw Exception('voitureId manquant');
           await _postTaxe(_voitureId!);
@@ -727,8 +743,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
         }
       }
     } on DioException catch (e) {
-      final msg = e.response?.data?['error']?.toString() ?? e.message ?? 'Erreur réseau';
-      _toast(msg);
+      _toast(e.message ?? 'Erreur réseau');
     } catch (e) {
       _toast(e.toString());
     } finally {
@@ -743,18 +758,15 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       setState(() => _currentStep -= 1);
     }
   }
-
-  // Add this helper inside your State class (above build)
+  // ====== User (pour l’AppBar) ======
   Future<UserModel?> _getCurrentUser() async {
     dynamic raw;
 
-    // 1) Try common composite keys first
     for (final key in ['user', 'currentUser', 'profile']) {
       raw = await CacheHelper.getData(key: key);
       if (raw != null) break;
     }
 
-    // 2) If we have a Map or JSON string, parse to UserModel
     try {
       if (raw is Map) {
         return UserModel.fromJson(Map<String, dynamic>.from(raw));
@@ -765,11 +777,8 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
           return UserModel.fromJson(Map<String, dynamic>.from(decoded));
         }
       }
-    } catch (_) {
-      // ignore parsing errors, we'll try fallbacks below
-    }
+    } catch (_) {}
 
-    // 3) Fallback: read individual fields
     final name = await CacheHelper.getData(key: 'nomComplet') ??
         await CacheHelper.getData(key: 'fullName') ??
         await CacheHelper.getData(key: 'name');
@@ -784,7 +793,6 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
         await CacheHelper.getData(key: 'id');
 
     if (name != null && name.toString().trim().isNotEmpty) {
-      // Build a minimal UserModel with what we have
       return UserModel.fromJson({
         'id': (id is int) ? id : int.tryParse('${id ?? 0}') ?? 0,
         'nomComplet': name.toString(),
@@ -793,7 +801,6 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       });
     }
 
-    // Nothing found -> AppBar will show "Utilisateur"
     return null;
   }
 
@@ -802,7 +809,6 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
     final routeNow = ModalRoute.of(context)?.settings.name ?? AppRoutes.voituresAdd;
 
     final sections = AppMenu.buildDefaultSections(
-
       hasPaiementAlerts: () => true,
     );
 
@@ -816,7 +822,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
     return FutureBuilder<UserModel?>(
       future: _getCurrentUser(),
       builder: (context, snap) {
-        final user = snap.data; // may be null; AppBar handles fallback "Utilisateur"
+        final user = snap.data;
 
         return Scaffold(
           drawer: AppSideMenu(
@@ -824,14 +830,14 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
             sections: sections,
             onNavigate: _navigate,
           ),
-            appBar: AppBarWithMenu(
-              title: 'Ajouter voiture',
-              onNavigate: _navigate,
-              homeRoute: AppRoutes.home,
-              sections: sections,
-              activeRoute: routeNow,
-              currentUser: user, // ✅ will now show the real name
-            ),
+          appBar: AppBarWithMenu(
+            title: 'Ajouter voiture',
+            onNavigate: _navigate,
+            homeRoute: AppRoutes.home,
+            sections: sections,
+            activeRoute: routeNow,
+            currentUser: user,
+          ),
           body: Stack(
             fit: StackFit.expand,
             children: [
@@ -941,13 +947,11 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       },
     );
   }
-
   // ====== FORMS ======
   Widget _buildVoitureForm() {
     return LayoutBuilder(builder: (context, c) {
       final twoCols = c.maxWidth >= 720;
-      Widget field(Widget w) =>
-          twoCols ? SizedBox(width: (c.maxWidth - 24) / 2, child: w) : w;
+      Widget field(Widget w) => twoCols ? SizedBox(width: (c.maxWidth - 24) / 2, child: w) : w;
 
       return Wrap(
         spacing: 24,
@@ -965,12 +969,10 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
             DropdownButtonFormField<int>(
               value: _selectedSocieteId,
               decoration: _dec('Société *'),
-              items: _societes
-                  .map((s) => DropdownMenuItem<int>(
+              items: _societes.map((s) => DropdownMenuItem<int>(
                 value: s.id,
                 child: Text('${s.nom}  (ID: ${s.id})'),
-              ))
-                  .toList(),
+              )).toList(),
               onChanged: (v) => setState(() => _selectedSocieteId = v),
               validator: (v) => v == null ? 'Obligatoire' : null,
             ),
@@ -1003,8 +1005,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Obligatoire';
               final n = int.tryParse(v);
-              if (n == null || n < 1980 || n > DateTime.now().year + 1)
-                return 'Année invalide';
+              if (n == null || n < 1980 || n > DateTime.now().year + 1) return 'Année invalide';
               return null;
             },
           )),
@@ -1070,7 +1071,10 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
           )),
 
           // Occupée par
-
+          field(TextFormField(
+            controller: _occupeeCtrl,
+            decoration: _dec('Occupée par (laisser vide = Libre)'),
+          )),
 
           // Switches
           SwitchListTile(
@@ -1079,10 +1083,8 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
             onChanged: (v) => setState(() => _active = v),
           ),
           SwitchListTile(
-            title: const Text('Saisie effectuée',
-                style: TextStyle(color: Colors.white70)),
-            subtitle:
-            const Text('Marquer si la saisie documentaire est complète'),
+            title: const Text('Saisie effectuée', style: TextStyle(color: Colors.white70)),
+            subtitle: const Text('Marquer si la saisie documentaire est complète'),
             value: _saisie,
             onChanged: (v) => setState(() => _saisie = v),
           ),
@@ -1269,7 +1271,6 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       );
     });
   }
-
   Widget _buildVignetteForm() {
     return LayoutBuilder(builder: (context, c) {
       final twoCols = c.maxWidth >= 720;
