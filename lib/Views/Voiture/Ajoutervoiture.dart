@@ -619,7 +619,7 @@ class _AjoutervoiturePageState extends State<AjoutervoiturePage> {
       'saisie': _saisie,
       // Optionnels (ignorés si absents côté DTO)
       'numInterne': _numInterneCtrl.text.trim().isEmpty ? null : _numInterneCtrl.text.trim(),
-      'occupee': _occupeeCtrl.text.trim().isEmpty ? null : _occupeeCtrl.text.trim(),
+      'occupee': null,
     };
     final res = await _postJson('Voitures', payload);
     final id = res.data['id'] as int?;
