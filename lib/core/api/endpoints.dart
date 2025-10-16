@@ -23,12 +23,5 @@ class EndPoint {
   }
 
   // ==========================================================
-  // 🔹 Endpoints spécifiques
-  // ==========================================================
-  static const String login = "Auth/login";
-  static const String voitures = "Voitures";
-  static const String chauffeurs = "Chauffeur";
-  static const String depenses = "Depenses";
-  static const String paiements = "Paiements";
-  static const String ordresMission = "OrdresMission";
+
 }
