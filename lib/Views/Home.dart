@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:meubcars/Data/Dtos/DashboardApi.dart';
-import 'package:meubcars/Data/Models/paiment.dart'; // PaymentType, PaymentItem, PaiementsApi
+import 'package:meubcars/Data/Models/paiment.dart';
 import 'package:meubcars/Data/Models/user_model.dart';
 import 'package:meubcars/Data/repositories/auth_repository.dart';
 import 'package:meubcars/Data/remote/auth_remote.dart';
@@ -11,6 +11,7 @@ import 'package:meubcars/utils/DonutChartCard.dart';
 import 'package:meubcars/utils/PaiementsDuMoisCard.dart' as pdm;
 import 'package:meubcars/utils/background.dart';
 import 'package:meubcars/utils/AppBar.dart';
+import 'package:meubcars/core/api/endpoints.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -22,33 +23,36 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   late final AuthRepository _repo = AuthRepository(AuthRemote());
   late Future<UserModel?> _userF;
-
   late Future<int> _nbPaiementsF;
+
+  // ✅ This ensures we don't build Home before knowing if user is authorized
+  late final Future<bool> _authCheck;
 
   @override
   void initState() {
     super.initState();
-
-    // ✅ Local auth check for direct URL access
-    Future.microtask(() async {
-      final token = (CacheHelper.getData(key: 'token') ?? '').toString().trim();
-      final expired = token.isEmpty || JwtDecoder.isExpired(token);
-      if (expired && mounted) {
-        await CacheHelper.clearData();
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
-      }
-    });
-
-    _userF = _repo.getCachedUser();
-    _nbPaiementsF = _fetchNbPaiementsEnRetard();
+    _authCheck = _verifyAuth();
   }
 
-  /// Récupère le nombre réel de paiements en retard (badge rouge)
+  Future<bool> _verifyAuth() async {
+    final token = (CacheHelper.getData(key: 'token') ?? '').toString().trim();
+    if (token.isEmpty || JwtDecoder.isExpired(token)) {
+      await CacheHelper.clearData();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+      }
+      return false;
+    }
+    _userF = _repo.getCachedUser();
+    _nbPaiementsF = _fetchNbPaiementsEnRetard();
+    return true;
+  }
+
   Future<int> _fetchNbPaiementsEnRetard() async {
     try {
       final api = await PaiementsApi.authed();
       final summary = await api.fetchSummary();
-      return summary.badgeCount; // ← vient de ton backend
+      return summary.badgeCount;
     } catch (e) {
       debugPrint('Erreur chargement paiements: $e');
       return 0;
@@ -57,63 +61,74 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final routeNow = ModalRoute.of(context)?.settings.name ?? AppRoutes.home;
+    // ✅ This FutureBuilder blocks build until _verifyAuth completes
+    return FutureBuilder<bool>(
+      future: _authCheck,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    // ✅ ferme proprement le Drawer si ouvert
-    void closeDrawerIfOpen() {
-      final s = Scaffold.maybeOf(context);
-      if (s?.isDrawerOpen ?? false) Navigator.of(context).pop();
-    }
+        // If auth failed, show nothing (navigation already redirected)
+        if (snap.data == false) return const SizedBox.shrink();
 
-    // ✅ navigation douce (sans pushReplacement)
-    void go(String r) async {
-      closeDrawerIfOpen();
-      if (routeNow == r) return;
+        // ✅ Only then build real home content
+        return FutureBuilder<UserModel?>(
+          future: _userF,
+          builder: (_, snapUser) {
+            final user = snapUser.data;
+            return FutureBuilder<int>(
+              future: _nbPaiementsF,
+              builder: (_, snapBadge) {
+                final nbBadge = snapBadge.data ?? 0;
 
-      // ⏳ navigation classique (garde l’état du menu)
-      await Navigator.of(context).pushNamed(r);
+                final sections = AppMenu.buildDefaultSections(
+                  role: user?.role,
+                  hasPaiementAlerts: () => nbBadge > 0,
+                );
 
-      // 🔁 recharge badge paiements après retour
-      if (mounted) setState(() => _nbPaiementsF = _fetchNbPaiementsEnRetard());
-    }
+                final routeNow =
+                    ModalRoute.of(context)?.settings.name ?? AppRoutes.home;
 
-    return FutureBuilder<UserModel?>(
-      future: _userF,
-      builder: (_, snapUser) {
-        final user = snapUser.data;
+                void closeDrawerIfOpen() {
+                  final s = Scaffold.maybeOf(context);
+                  if (s?.isDrawerOpen ?? false) Navigator.of(context).pop();
+                }
 
-        return FutureBuilder<int>(
-          future: _nbPaiementsF,
-          builder: (_, snapBadge) {
-            final nbBadge = snapBadge.data ?? 0;
+                void go(String r) async {
+                  closeDrawerIfOpen();
+                  if (routeNow == r) return;
+                  await Navigator.of(context).pushNamed(r);
+                  if (mounted) {
+                    setState(() => _nbPaiementsF = _fetchNbPaiementsEnRetard());
+                  }
+                }
 
-            final sections = AppMenu.buildDefaultSections(
-              role: user?.role,
-
-              hasPaiementAlerts: () => nbBadge > 0,
-            );
-
-            return Scaffold(
-              key: const ValueKey('HomeScaffold'),
-              backgroundColor: Colors.transparent,
-              appBar: AppBarWithMenu(
-                title: 'Home',
-                onNavigate: go,
-                currentUser: user,
-              ),
-              drawer: AppSideMenu(
-                key: const ValueKey('AppSideMenu'),
-                activeRoute: routeNow,
-                sections: sections,
-                onNavigate: go,
-              ),
-              body: const Stack(
-                fit: StackFit.expand,
-                children: [
-                  BrandBackground(),
-                  _HomeContent(),
-                ],
-              ),
+                return Scaffold(
+                  key: const ValueKey('HomeScaffold'),
+                  backgroundColor: Colors.transparent,
+                  appBar: AppBarWithMenu(
+                    title: 'Home',
+                    onNavigate: go,
+                    currentUser: user,
+                  ),
+                  drawer: AppSideMenu(
+                    key: const ValueKey('AppSideMenu'),
+                    activeRoute: routeNow,
+                    sections: sections,
+                    onNavigate: go,
+                  ),
+                  body: const Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      BrandBackground(),
+                      _HomeContent(),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );
