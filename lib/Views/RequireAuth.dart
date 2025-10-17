@@ -1,11 +1,10 @@
-// lib/Views/RequireAuth.dart
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:meubcars/core/cache/cacheHelper.dart';
 
-class RequireAuth extends StatelessWidget {
-  final Widget child;
+class RequireAuth extends StatefulWidget {
   final String targetRouteName;
+  final Widget child;
 
   const RequireAuth({
     super.key,
@@ -13,56 +12,55 @@ class RequireAuth extends StatelessWidget {
     required this.child,
   });
 
-  Future<bool> _isLoggedInAndValid() async {
-    final raw = CacheHelper.getData(key: 'token');
-    final token = (raw ?? '').toString().trim();
+  @override
+  State<RequireAuth> createState() => _RequireAuthState();
+}
 
-    if (token.isEmpty || token == 'null' || token == '0') {
-      return false;
-    }
+class _RequireAuthState extends State<RequireAuth> {
+  bool _checked = false;
+  bool _authorized = false;
 
-    try {
-      if (JwtDecoder.isExpired(token)) {
-        await _clearSession();
-        return false;
-      }
-      return true;
-    } catch (_) {
-      await _clearSession();
-      return false;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
   }
 
-  Future<void> _clearSession() async {
-    await CacheHelper.clearData();
+  Future<void> _checkAuth() async {
+    final token = (CacheHelper.getData(key: 'token') ?? '').toString().trim();
+
+    bool ok = false;
+    if (token.isNotEmpty && !JwtDecoder.isExpired(token)) {
+      ok = true;
+    }
+
+    if (!ok) {
+      // Token missing or expired → redirect before building anything
+      await CacheHelper.clearData();
+      if (mounted) {
+        // Replace with /login and clear navigation history
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _authorized = ok;
+        _checked = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isLoggedInAndValid(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    // Wait until check completes
+    if (!_checked) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-        final isLoggedIn = snapshot.data ?? false;
-
-        if (!isLoggedIn) {
-          Future.microtask(() {
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/login',
-                  (route) => false,
-              arguments: {'from': targetRouteName},
-            );
-          });
-          return const SizedBox.shrink();
-        }
-
-        return child;
-      },
-    );
+    // If authorized → show page, else empty (since we redirected)
+    return _authorized ? widget.child : const SizedBox.shrink();
   }
 }

@@ -31,22 +31,8 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    _authCheck = _verifyAuth();
   }
 
-  Future<bool> _verifyAuth() async {
-    final token = (CacheHelper.getData(key: 'token') ?? '').toString().trim();
-    if (token.isEmpty || JwtDecoder.isExpired(token)) {
-      await CacheHelper.clearData();
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
-      }
-      return false;
-    }
-    _userF = _repo.getCachedUser();
-    _nbPaiementsF = _fetchNbPaiementsEnRetard();
-    return true;
-  }
 
   Future<int> _fetchNbPaiementsEnRetard() async {
     try {
