@@ -9,7 +9,6 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 
 // === MeubCars Imports ===
 import 'package:meubcars/Views/RequireAuth.dart';
-import 'package:meubcars/Views/Voiture/Cr%C3%A9erflux.dart';
 import 'package:meubcars/core/cache/cacheHelper.dart';
 import 'package:meubcars/core/api/dio_consumer.dart';
 import 'package:meubcars/Data/remote/auth_remote.dart';
@@ -19,10 +18,8 @@ import 'package:meubcars/Views/ProfilePage.dart';
 import 'package:meubcars/Views/SettingsPage.dart';
 import 'package:meubcars/Views/Voiture/Ajoutervoiture.dart';
 import 'package:meubcars/Views/Voiture/CarDetailsPage.dart';
-import 'package:meubcars/Views/Voiture/FluxDetailPage.dart';
 import 'package:meubcars/Views/Voiture/FraisVoiturePage.dart';
 import 'package:meubcars/Views/Voiture/Listevoitures.dart';
-import 'package:meubcars/Views/Voiture/Fluxdetransport.dart';
 import 'package:meubcars/Views/Voiture/VoitureEditPage.dart';
 import 'package:meubcars/Views/chaffeurs/Listechauffeurs.dart';
 import 'package:meubcars/Views/chaffeurs/Ajouterchauffeur.dart';
@@ -156,11 +153,7 @@ class MeubCarsApp extends StatelessWidget {
           child: _wrap('Ajouter voiture', AppRoutes.voituresAdd,
               const AjoutervoiturePage()),
         ),
-        AppRoutes.voituresFluxAdd: (_) => RequireAuth(
-          targetRouteName: AppRoutes.voituresFluxAdd,
-          child: _wrap('Créer un flux', AppRoutes.voituresFluxAdd,
-              const Creerflux()),
-        ),
+
         AppRoutes.voitureDetails: (_) => RequireAuth(
           targetRouteName: AppRoutes.voitureDetails,
           child: _wrap('Détails voiture', AppRoutes.voituresList,
@@ -203,12 +196,6 @@ class MeubCarsApp extends StatelessWidget {
         AppRoutes.societesAdd: (_) => RequireAuth(
           targetRouteName: AppRoutes.societesAdd,
           child: const Ajoutersociete(),
-        ),
-
-        // ===== Flux transport =====
-        AppRoutes.voituresFluxDetail: (_) => RequireAuth(
-          targetRouteName: AppRoutes.voituresFluxDetail,
-          child: const FluxDetailPage(),
         ),
 
         // ===== Missions =====

@@ -48,8 +48,6 @@ class AppRoutes {
   static const missionsCreate = '/missions/create';
   static const superAdminAddAdmin = '/superadmin/addadmin';
   static const superDocordremision = '/superadmin/docordremision';
-  static const voituresFluxAdd = '/voitures/flux/add';
-  static const voituresFluxDetail = '/voitures/flux/detail';
   static const voituresFrais = '/voitures/frais';
   static const voitureDetails = '/voitures/details';
 }
