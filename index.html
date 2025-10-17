@@ -19,31 +19,26 @@
   <title>MeubCars</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- 🔒 Global Auth Guard (Flutter Web) -->
+  <!-- 🔒 Global Auth Guard (runs before Flutter loads) -->
   <script>
     (function() {
       try {
         const token = localStorage.getItem('token');
-        const path = (window.location.hash || '').toLowerCase();
+        const hash = (window.location.hash || '').toLowerCase();
 
-        // Pages that require authentication
-        const protectedPaths = [
-          '/home',
-          '/voitures',
-          '/chauffeurs',
-          '/societes',
-          '/paiements',
-          '/missions',
-          '/superadmin',
-          '/profile',
-          '/settings'
-        ];
+        const publicRoutes = ['#/login', '#/', ''];
+        const isPublic = publicRoutes.some(p => hash === p || hash.startsWith(p));
+        const hasToken = token && token.trim() !== '' && token !== 'null';
 
-        const isProtected = protectedPaths.some(p => path.includes(p));
+        if (!hasToken && !isPublic) {
+          console.warn('🔒 No valid token — redirecting to /login');
+          window.location.replace('/#/login');
+        }
 
-        if ((!token || token === 'null' || token.trim() === '') && isProtected) {
-          console.warn('🔒 No valid token detected — redirecting to /login');
-          window.location.href = '/#/login';
+        // Optional: auto-redirect logged-in users away from /login
+        if (hasToken && hash.startsWith('#/login')) {
+          console.info('✅ Logged in — skipping login page');
+          window.location.replace('/#/home');
         }
       } catch (e) {
         console.error('Auth check error:', e);
