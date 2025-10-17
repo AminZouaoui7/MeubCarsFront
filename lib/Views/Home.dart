@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:meubcars/Data/Dtos/DashboardApi.dart';
 import 'package:meubcars/Data/Models/paiment.dart'; // PaymentType, PaymentItem, PaiementsApi
 import 'package:meubcars/Data/Models/user_model.dart';
 import 'package:meubcars/Data/repositories/auth_repository.dart';
 import 'package:meubcars/Data/remote/auth_remote.dart';
+import 'package:meubcars/core/cache/cacheHelper.dart';
 import 'package:meubcars/utils/AppSideMenu.dart';
 import 'package:meubcars/utils/DonutChartCard.dart';
 import 'package:meubcars/utils/PaiementsDuMoisCard.dart' as pdm;
@@ -26,6 +28,17 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ Local auth check for direct URL access
+    Future.microtask(() async {
+      final token = (CacheHelper.getData(key: 'token') ?? '').toString().trim();
+      final expired = token.isEmpty || JwtDecoder.isExpired(token);
+      if (expired && mounted) {
+        await CacheHelper.clearData();
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+      }
+    });
+
     _userF = _repo.getCachedUser();
     _nbPaiementsF = _fetchNbPaiementsEnRetard();
   }
