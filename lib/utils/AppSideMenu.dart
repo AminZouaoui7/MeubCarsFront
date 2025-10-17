@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:meubcars/Data/Models/paiment.dart';
+import 'package:meubcars/core/cache/cacheHelper.dart';
 
 Future<int> fetchNbPaiementsEnRetard() async {
   try {
@@ -30,47 +31,25 @@ class AppColors {
 
 /// ===================== Routes catalog =====================
 class AppRoutes {
-  // Home
-  static const home = '/home';
-
-  // Auth / User
   static const login = '/login';
+  static const home = '/home';
   static const profile = '/profile';
   static const settings = '/settings';
-
-  // Voitures
   static const voituresList = '/voitures';
   static const voituresAdd = '/voitures/add';
-  static const voituresFlux = '/voitures/flux';
-  static const voituresFluxAdd = '/voitures/flux/add';
-  static const voitureDetails = '/voitures/details';
   static const voituresEdit = '/voitures/edit';
-  static const voituresFluxDetail = '/voitures/flux/detail';
-  static const voituresFrais = '/voitures/frais';
-
-  // Chauffeurs
+  static const paiementsHistory = '/paiements/history';
   static const chauffeursList = '/chauffeurs';
   static const chauffeursAdd = '/chauffeurs/add';
-
-  // Sociétés
   static const societesList = '/societes';
   static const societesAdd = '/societes/add';
-
-  // Paiements
-  static const paiements = '/paiements';
-  static const paiementsHistory = '/paiements/history';
-
-  // Missions
-  static const missionsCreate = '/missions/new';
-  static const missionsList = '/missions';
-
-  // 🧑‍💼 Super Admin
-  static const superAdminAddAdmin = '/superadmin/add-admin';
-  static const superAdminDocs = '/superadmin/docs';
-
-  static const superDocordremision = '/superadmin/Docordremision';
-
-  static const voitureDocuments = '/voitures/documents';
+  static const missionsCreate = '/missions/create';
+  static const superAdminAddAdmin = '/superadmin/addadmin';
+  static const superDocordremision = '/superadmin/docordremision';
+  static const voituresFluxAdd = '/voitures/flux/add';
+  static const voituresFluxDetail = '/voitures/flux/detail';
+  static const voituresFrais = '/voitures/frais';
+  static const voitureDetails = '/voitures/details';
 }
 /// ===================== Menu models =====================
 class MenuItem {
@@ -322,6 +301,20 @@ class _DesktopRail extends StatelessWidget {
                 },
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: ListTile(
+                leading: const Icon(Icons.logout, color: Colors.redAccent),
+                title: const Text('Déconnexion', style: TextStyle(color: Colors.redAccent)),
+                onTap: () async {
+                  await CacheHelper.clearData();
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+                  }
+                },
+              ),
+            ),
+
           ],
         ),
       ),
@@ -641,6 +634,20 @@ class _MobileDrawer extends StatelessWidget {
                   },
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.redAccent),
+                  title: const Text('Déconnexion', style: TextStyle(color: Colors.redAccent)),
+                  onTap: () async {
+                    await CacheHelper.clearData();
+                    if (context.mounted) {
+                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+                    }
+                  },
+                ),
+              ),
+
             ],
           ),
         ),
