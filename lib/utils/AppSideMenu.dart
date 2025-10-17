@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:meubcars/Data/Models/paiment.dart';
 import 'package:meubcars/core/cache/cacheHelper.dart';
+import 'dart:html' as html;
 
 Future<int> fetchNbPaiementsEnRetard() async {
   try {
@@ -309,11 +311,25 @@ class _DesktopRail extends StatelessWidget {
                   onTap: () async {
                     // 1️⃣ Clear all cached auth data
                     await CacheHelper.clearData();
+                    await Future.delayed(const Duration(milliseconds: 150));
 
-                    // 2️⃣ Force a short delay to ensure storage flush (important on Flutter Web)
-                    await Future.delayed(const Duration(milliseconds: 120));
+                    // 2️⃣ Extra cleanup for Flutter Web (localStorage + reload)
+                    if (kIsWeb) {
 
-                    // 3️⃣ Redirect cleanly to login and clear navigation stack
+                      try {
+                        html.window.localStorage.clear();
+                        html.window.sessionStorage.clear();
+                        print('🧹 LocalStorage cleared successfully');
+                      } catch (e) {
+                        print('Error clearing localStorage: $e');
+                      }
+
+                      // 3️⃣ Force reload to guarantee clean state
+                      html.window.location.replace('/#/login');
+                      return; // stop further navigation
+                    }
+
+                    // 4️⃣ Mobile / desktop fallback
                     if (context.mounted) {
                       Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
                     }
