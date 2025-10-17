@@ -7,6 +7,7 @@
 
   import 'package:intl/intl.dart';
   import 'package:intl/date_symbol_data_local.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
   import 'package:meubcars/Views/RequireAuth.dart';
 
   import 'package:meubcars/core/cache/cacheHelper.dart';
@@ -304,13 +305,37 @@
           .animate(CurvedAnimation(parent: _controller, curve: const Interval(0.8, 1.0, curve: Curves.easeOut)));
     }
 
-    void _startAnimationSequence() {
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (!mounted) return;
-        _controller.forward().then((_) async {
-          await Future.delayed(const Duration(milliseconds: 300));
-          if (mounted) setState(() => _showLogin = true);
-        });
+    void _startAnimationSequence() async {
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      if (!mounted) return;
+      _controller.forward().then((_) async {
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        // ✅ Check token validity before showing login
+        final raw = CacheHelper.getData(key: 'token');
+        final token = (raw ?? '').toString().trim();
+        final valid = token.isNotEmpty;
+
+        bool isExpired = false;
+        try {
+          // you'll need jwt_decoder package
+          if (token.isNotEmpty) {
+            isExpired = JwtDecoder.isExpired(token);
+          }
+        } catch (_) {
+          isExpired = true;
+        }
+
+        if (mounted) {
+          if (valid && !isExpired) {
+            // 🟩 token still valid → go to home directly
+            Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+          } else {
+            // 🟥 no token or expired → show login
+            setState(() => _showLogin = true);
+          }
+        }
       });
     }
 
