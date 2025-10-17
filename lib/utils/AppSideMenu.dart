@@ -306,12 +306,18 @@ class _DesktopRail extends StatelessWidget {
               child: ListTile(
                 leading: const Icon(Icons.logout, color: Colors.redAccent),
                 title: const Text('Déconnexion', style: TextStyle(color: Colors.redAccent)),
-                onTap: () async {
-                  await CacheHelper.clearData();
-                  if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
-                  }
-                },
+                  onTap: () async {
+                    // 1️⃣ Clear all cached auth data
+                    await CacheHelper.clearData();
+
+                    // 2️⃣ Force a short delay to ensure storage flush (important on Flutter Web)
+                    await Future.delayed(const Duration(milliseconds: 120));
+
+                    // 3️⃣ Redirect cleanly to login and clear navigation stack
+                    if (context.mounted) {
+                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+                    }
+                  },
               ),
             ),
 
@@ -639,12 +645,18 @@ class _MobileDrawer extends StatelessWidget {
                 child: ListTile(
                   leading: const Icon(Icons.logout, color: Colors.redAccent),
                   title: const Text('Déconnexion', style: TextStyle(color: Colors.redAccent)),
-                  onTap: () async {
-                    await CacheHelper.clearData();
-                    if (context.mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
-                    }
-                  },
+                    onTap: () async {
+                      // 1️⃣ Clear all cached auth data
+                      await CacheHelper.clearData();
+
+                      // 2️⃣ Force a short delay to ensure storage flush (important on Flutter Web)
+                      await Future.delayed(const Duration(milliseconds: 120));
+
+                      // 3️⃣ Redirect cleanly to login and clear navigation stack
+                      if (context.mounted) {
+                        Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+                      }
+                    },
                 ),
               ),
 
