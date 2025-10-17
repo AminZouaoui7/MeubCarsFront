@@ -1,204 +1,239 @@
-  import 'dart:convert';
-
-  import 'package:dio/dio.dart';
-  import 'package:flutter/material.dart';
-  import 'package:flutter/services.dart';
-  import 'package:flutter_localizations/flutter_localizations.dart';
-
-  import 'package:intl/intl.dart';
-  import 'package:intl/date_symbol_data_local.dart';
+import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-  import 'package:meubcars/Views/RequireAuth.dart';
 
-  import 'package:meubcars/core/cache/cacheHelper.dart';
-  import 'package:meubcars/core/api/dio_consumer.dart';
-  import 'package:meubcars/Data/remote/auth_remote.dart';
-  import 'package:meubcars/Data/repositories/auth_repository.dart';
-  import 'package:meubcars/Views/OrdreMission/OrdreMissionFormPage.dart';
-  import 'package:meubcars/Views/ProfilePage.dart';
-  import 'package:meubcars/Views/SettingsPage.dart';
+// === MeubCars Imports ===
+import 'package:meubcars/Views/RequireAuth.dart';
+import 'package:meubcars/Views/Voiture/Cr%C3%A9erflux.dart';
+import 'package:meubcars/core/cache/cacheHelper.dart';
+import 'package:meubcars/core/api/dio_consumer.dart';
+import 'package:meubcars/Data/remote/auth_remote.dart';
+import 'package:meubcars/Data/repositories/auth_repository.dart';
+import 'package:meubcars/Views/OrdreMission/OrdreMissionFormPage.dart';
+import 'package:meubcars/Views/ProfilePage.dart';
+import 'package:meubcars/Views/SettingsPage.dart';
+import 'package:meubcars/Views/Voiture/Ajoutervoiture.dart';
+import 'package:meubcars/Views/Voiture/CarDetailsPage.dart';
+import 'package:meubcars/Views/Voiture/FluxDetailPage.dart';
+import 'package:meubcars/Views/Voiture/FraisVoiturePage.dart';
+import 'package:meubcars/Views/Voiture/Listevoitures.dart';
+import 'package:meubcars/Views/Voiture/Fluxdetransport.dart';
+import 'package:meubcars/Views/Voiture/VoitureEditPage.dart';
+import 'package:meubcars/Views/chaffeurs/Listechauffeurs.dart';
+import 'package:meubcars/Views/chaffeurs/Ajouterchauffeur.dart';
+import 'package:meubcars/Views/Sociétés/Ajoutersociété.dart';
+import 'package:meubcars/Views/Sociétés/Listesociétés.dart';
+import 'package:meubcars/Views/paiment/PaiementsHistoryPage.dart';
+import 'package:meubcars/Views/paiment/Paiementsmois.dart';
+import 'package:meubcars/Views/superadmin/addAdmin.dart';
+import 'package:meubcars/Views/superadmin/docOrdreMision.dart';
+import 'package:meubcars/utils/AppSideMenu.dart';
+import 'package:meubcars/utils/PageShell.dart';
+import 'package:meubcars/utils/AppBar.dart';
+import 'package:meubcars/Views/Home.dart';
+import 'package:meubcars/PostLoginTransition.dart'; // SplashScreen
 
-  import 'package:meubcars/Views/Voiture/Ajoutervoiture.dart';
-  import 'package:meubcars/Views/Voiture/CarDetailsPage.dart';
-  import 'package:meubcars/Views/Voiture/Cr%C3%A9erflux.dart';
-  import 'package:meubcars/Views/Voiture/FluxDetailPage.dart';
-  import 'package:meubcars/Views/Voiture/FraisVoiturePage.dart';
-  import 'package:meubcars/Views/Voiture/Listevoitures.dart';
-  import 'package:meubcars/Views/Voiture/Fluxdetransport.dart';
-  import 'package:meubcars/Views/Voiture/VoitureEditPage.dart';
+// =====================================================
+// 🔹 MAIN
+// =====================================================
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await CacheHelper.init();
+  DioConsumer.defaultNavigatorKey = navigatorKey;
 
-  import 'package:meubcars/Views/chaffeurs/Listechauffeurs.dart';
-  import 'package:meubcars/Views/chaffeurs/Ajouterchauffeur.dart';
-  import 'package:meubcars/Views/Sociétés/Ajoutersociété.dart';
-  import 'package:meubcars/Views/Sociétés/Listesociétés.dart';
-  import 'package:meubcars/Views/paiment/PaiementsHistoryPage.dart';
-  import 'package:meubcars/Views/paiment/Paiementsmois.dart';
-  import 'package:meubcars/Views/superadmin/addAdmin.dart';
-  import 'package:meubcars/Views/superadmin/docOrdreMision.dart';
-  import 'package:meubcars/Views/superadmin/docs.dart';
+  await initializeDateFormatting('fr_FR', null);
+  Intl.defaultLocale = 'fr_FR';
 
-  import 'package:meubcars/utils/AppSideMenu.dart';
-  import 'package:meubcars/utils/PageShell.dart';
-  import 'package:meubcars/utils/AppBar.dart';
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+  ));
 
-  import 'package:meubcars/Views/Home.dart';
-  import 'package:meubcars/PostLoginTransition.dart'; // SplashScreen
+  runApp(const MeubCarsApp());
+}
 
-  Future<void> main() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await CacheHelper.init();
-    DioConsumer.defaultNavigatorKey = navigatorKey;  // 👈 AJOUT
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-    await initializeDateFormatting('fr_FR', null);
-    Intl.defaultLocale = 'fr_FR';
+// =====================================================
+// 🔹 APP
+// =====================================================
+class MeubCarsApp extends StatelessWidget {
+  const MeubCarsApp({super.key});
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ));
+  // --- Vérifie le token avant de construire l’app ---
+  Future<bool> _isLoggedIn() async {
+    final raw = CacheHelper.getData(key: 'token');
+    final token = (raw ?? '').toString().trim();
+    if (token.isEmpty) return false;
 
-    runApp(const MeubCarsApp());
-  }
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-
-  class MeubCarsApp extends StatelessWidget {
-    const MeubCarsApp({super.key});
-
-    Widget _wrap(String title, String activeRoute, Widget child) {
-      return PageShell(title: title, activeRoute: activeRoute, child: child);
+    try {
+      return !JwtDecoder.isExpired(token);
+    } catch (_) {
+      return false;
     }
+  }
 
-    @override
-    Widget build(BuildContext context) {
-      return MaterialApp(
-        navigatorKey: navigatorKey, // 👈 important
-        title: 'MeubCars',
-        debugShowCheckedModeBanner: false,
+  Widget _wrap(String title, String activeRoute, Widget child) {
+    return PageShell(title: title, activeRoute: activeRoute, child: child);
+  }
 
-        // === Localisations ===
-        locale: const Locale('fr', 'FR'),
-        supportedLocales: const [
-          Locale('fr', 'FR'),
-          Locale('en', 'US'),
-        ],
-        localizationsDelegates:  [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      navigatorKey: navigatorKey,
+      title: 'MeubCars',
+      debugShowCheckedModeBanner: false,
 
-        theme: ThemeData(
+      locale: const Locale('fr', 'FR'),
+      supportedLocales: const [
+        Locale('fr', 'FR'),
+        Locale('en', 'US'),
+      ],
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFE4631D),
           brightness: Brightness.dark,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFE4631D),
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-          scaffoldBackgroundColor: const Color(0xFF0C0C0D),
         ),
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF0C0C0D),
+      ),
 
-        initialRoute: '/',
-          routes: {
-            '/': (_) => const SplashScreen(),
-            AppRoutes.login:   (_) => const LoginPage(),
-
-            // (option) si tu veux que Profile/Settings soient protégés, laisse-les en RequireAuth
-            // sinon remets-les en accès direct.
-            AppRoutes.profile: (_) => const ProfilePage(),
-            AppRoutes.settings: (_) => const SettingsPage(),
-
-            // --- Protégé ---
-            AppRoutes.home: (_) => RequireAuth(
+      // =====================================================
+      // 🔐 Vérifie le token au démarrage
+      // =====================================================
+      home: FutureBuilder<bool>(
+        future: _isLoggedIn(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.data == true) {
+            return const RequireAuth(
               targetRouteName: AppRoutes.home,
-              child: const Home(),
-            ),
+              child: Home(),
+            );
+          } else {
+            return const LoginPage();
+          }
+        },
+      ),
 
-            // ===== Voitures =====
-            AppRoutes.voituresList: (_) => RequireAuth(
-              targetRouteName: AppRoutes.voituresList,
-              child: _wrap('Liste des voitures', AppRoutes.voituresList, const Listevoitures()),
-            ),
-            AppRoutes.voituresAdd: (_) => RequireAuth(
-              targetRouteName: AppRoutes.voituresAdd,
-              child: _wrap('Ajouter voiture', AppRoutes.voituresAdd, const AjoutervoiturePage()),
-            ),
-            AppRoutes.voituresFluxAdd: (_) => RequireAuth(
-              targetRouteName: AppRoutes.voituresFluxAdd,
-              child: _wrap('Créer un flux', AppRoutes.voituresFluxAdd, const Creerflux()),
-            ),
-            AppRoutes.voitureDetails: (_) => RequireAuth(
-              targetRouteName: AppRoutes.voitureDetails,
-              child: _wrap('Détails voiture', AppRoutes.voituresList, const CarDetailsPage()),
-            ),
-            AppRoutes.voituresEdit: (_) => RequireAuth(
-              targetRouteName: AppRoutes.voituresEdit,
-              child: _wrap('Modifier voiture', AppRoutes.voituresList, const VoitureEditPage()),
-            ),
-            AppRoutes.voituresFrais: (_) => RequireAuth(
-              targetRouteName: AppRoutes.voituresFrais,
-              child: _wrap('Liste des frais', AppRoutes.voituresFrais, const FraisVoiturePage()),
-            ),
+      // =====================================================
+      // 🔹 Routes
+      // =====================================================
+      routes: {
+        AppRoutes.login: (_) => const LoginPage(),
+        AppRoutes.profile: (_) => const ProfilePage(),
+        AppRoutes.settings: (_) => const SettingsPage(),
 
-            // ===== Paiements =====
-            // AppRoutes.paiements: (...) si tu la réactives
-            AppRoutes.paiementsHistory: (_) => RequireAuth(
-              targetRouteName: AppRoutes.paiementsHistory,
-              child: const PaiementsHistoryPage(),
-            ),
-
-            // ===== Chauffeurs =====
-            AppRoutes.chauffeursList: (_) => RequireAuth(
-              targetRouteName: AppRoutes.chauffeursList,
-              child: _wrap('Liste des chauffeurs', AppRoutes.chauffeursList, const ListeChauffeursPage()),
-            ),
-            AppRoutes.chauffeursAdd: (_) => RequireAuth(
-              targetRouteName: AppRoutes.chauffeursAdd,
-              child: const ChauffeursAddPage(),
-            ),
-
-            // ===== Sociétés =====
-            AppRoutes.societesList: (_) => RequireAuth(
-              targetRouteName: AppRoutes.societesList,
-              child: _wrap('Liste des sociétés', AppRoutes.societesList, const Listesocietes()),
-            ),
-            AppRoutes.societesAdd: (_) => RequireAuth(
-              targetRouteName: AppRoutes.societesAdd,
-              child: const Ajoutersociete(),
-            ),
-
-            // ===== Flux transport =====
-            AppRoutes.voituresFluxDetail: (_) => RequireAuth(
-              targetRouteName: AppRoutes.voituresFluxDetail,
-              child: const FluxDetailPage(),
-            ),
-
-            // ===== Missions =====
-            AppRoutes.missionsCreate: (_) => RequireAuth(
-              targetRouteName: AppRoutes.missionsCreate,
-              child: _wrap('Nouvel ordre de mission', AppRoutes.missionsCreate, const OrdreMissionFormPage()),
-            ),
-            // AppRoutes.missionsList: (_) => RequireAuth(...),
-
-            // ===== Super Admin =====
-            AppRoutes.superAdminAddAdmin: (_) => RequireAuth(
-              targetRouteName: AppRoutes.superAdminAddAdmin,
-              child: const AddAdminPage(),
-            ),
-            AppRoutes.superDocordremision: (_) => RequireAuth(
-              targetRouteName: AppRoutes.superDocordremision,
-              child: const Docordremision(),
-            ),
-          },
-        onUnknownRoute: (settings) => MaterialPageRoute(
-          builder: (_) => _wrap('Route inconnue', '', const SizedBox.shrink()),
+        AppRoutes.home: (_) => RequireAuth(
+          targetRouteName: AppRoutes.home,
+          child: const Home(),
         ),
-      );
-    }
+
+        // ===== Voitures =====
+        AppRoutes.voituresList: (_) => RequireAuth(
+          targetRouteName: AppRoutes.voituresList,
+          child: _wrap('Liste des voitures', AppRoutes.voituresList,
+              const Listevoitures()),
+        ),
+        AppRoutes.voituresAdd: (_) => RequireAuth(
+          targetRouteName: AppRoutes.voituresAdd,
+          child: _wrap('Ajouter voiture', AppRoutes.voituresAdd,
+              const AjoutervoiturePage()),
+        ),
+        AppRoutes.voituresFluxAdd: (_) => RequireAuth(
+          targetRouteName: AppRoutes.voituresFluxAdd,
+          child: _wrap('Créer un flux', AppRoutes.voituresFluxAdd,
+              const Creerflux()),
+        ),
+        AppRoutes.voitureDetails: (_) => RequireAuth(
+          targetRouteName: AppRoutes.voitureDetails,
+          child: _wrap('Détails voiture', AppRoutes.voituresList,
+              const CarDetailsPage()),
+        ),
+        AppRoutes.voituresEdit: (_) => RequireAuth(
+          targetRouteName: AppRoutes.voituresEdit,
+          child: _wrap('Modifier voiture', AppRoutes.voituresList,
+              const VoitureEditPage()),
+        ),
+        AppRoutes.voituresFrais: (_) => RequireAuth(
+          targetRouteName: AppRoutes.voituresFrais,
+          child: _wrap('Liste des frais', AppRoutes.voituresFrais,
+              const FraisVoiturePage()),
+        ),
+
+        // ===== Paiements =====
+        AppRoutes.paiementsHistory: (_) => RequireAuth(
+          targetRouteName: AppRoutes.paiementsHistory,
+          child: const PaiementsHistoryPage(),
+        ),
+
+        // ===== Chauffeurs =====
+        AppRoutes.chauffeursList: (_) => RequireAuth(
+          targetRouteName: AppRoutes.chauffeursList,
+          child: _wrap('Liste des chauffeurs', AppRoutes.chauffeursList,
+              const ListeChauffeursPage()),
+        ),
+        AppRoutes.chauffeursAdd: (_) => RequireAuth(
+          targetRouteName: AppRoutes.chauffeursAdd,
+          child: const ChauffeursAddPage(),
+        ),
+
+        // ===== Sociétés =====
+        AppRoutes.societesList: (_) => RequireAuth(
+          targetRouteName: AppRoutes.societesList,
+          child: _wrap('Liste des sociétés', AppRoutes.societesList,
+              const Listesocietes()),
+        ),
+        AppRoutes.societesAdd: (_) => RequireAuth(
+          targetRouteName: AppRoutes.societesAdd,
+          child: const Ajoutersociete(),
+        ),
+
+        // ===== Flux transport =====
+        AppRoutes.voituresFluxDetail: (_) => RequireAuth(
+          targetRouteName: AppRoutes.voituresFluxDetail,
+          child: const FluxDetailPage(),
+        ),
+
+        // ===== Missions =====
+        AppRoutes.missionsCreate: (_) => RequireAuth(
+          targetRouteName: AppRoutes.missionsCreate,
+          child: _wrap('Nouvel ordre de mission', AppRoutes.missionsCreate,
+              const OrdreMissionFormPage()),
+        ),
+
+        // ===== Super Admin =====
+        AppRoutes.superAdminAddAdmin: (_) => RequireAuth(
+          targetRouteName: AppRoutes.superAdminAddAdmin,
+          child: const AddAdminPage(),
+        ),
+        AppRoutes.superDocordremision: (_) => RequireAuth(
+          targetRouteName: AppRoutes.superDocordremision,
+          child: const Docordremision(),
+        ),
+      },
+    );
   }
+}
 
 
-  Widget _page(String title, String activeRoute) {
+Widget _page(String title, String activeRoute) {
     final sections = AppMenu.buildDefaultSections(
     );
 
