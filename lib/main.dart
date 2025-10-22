@@ -117,35 +117,59 @@ class MeubCarsApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0C0C0D),
       ),
       initialRoute: initialRoute,
-      routes: {
-        AppRoutes.postLogin: (_) => const PostLoginTransition(),
-        AppRoutes.login: (_) => const LoginPage(),
-        AppRoutes.profile: (_) => const ProfilePage(),
-        AppRoutes.settings: (_) => const SettingsPage(),
-        AppRoutes.home: (_) => const Home(),
-        AppRoutes.voituresList: (_) =>
-            _wrap('Liste des voitures', AppRoutes.voituresList, const Listevoitures()),
-        AppRoutes.voituresAdd: (_) =>
-            _wrap('Ajouter voiture', AppRoutes.voituresAdd, const AjoutervoiturePage()),
-        AppRoutes.voitureDetails: (_) =>
-            _wrap('Détails voiture', AppRoutes.voituresList, const CarDetailsPage()),
-        AppRoutes.voituresEdit: (_) =>
-            _wrap('Modifier voiture', AppRoutes.voituresList, const VoitureEditPage()),
-        AppRoutes.voituresFrais: (_) =>
-            _wrap('Liste des frais', AppRoutes.voituresFrais, const FraisVoiturePage()),
-        AppRoutes.paiementsHistory: (_) => const PaiementsHistoryPage(),
-        AppRoutes.chauffeursList: (_) =>
-            _wrap('Liste des chauffeurs', AppRoutes.chauffeursList, const ListeChauffeursPage()),
-        AppRoutes.chauffeursAdd: (_) => const ChauffeursAddPage(),
-        AppRoutes.societesList: (_) =>
-            _wrap('Liste des sociétés', AppRoutes.societesList, const Listesocietes()),
-        AppRoutes.societesAdd: (_) => const Ajoutersociete(),
-        AppRoutes.missionsCreate: (_) =>
-            _wrap('Nouvel ordre de mission', AppRoutes.missionsCreate, const OrdreMissionFormPage()),
-        AppRoutes.superAdminAddAdmin: (_) => const AddAdminPage(),
-        AppRoutes.superDocordremision: (_) => const Docordremision(),
-      }
-,
+        routes: {
+          // publiques
+          AppRoutes.postLogin: (_) => const PostLoginTransition(),
+          AppRoutes.login: (_) => const LoginPage(),
+
+          // 🔒 privées
+          AppRoutes.home: (_) =>
+              RequireAuth(routeName: AppRoutes.home, child: const Home()),
+          AppRoutes.profile: (_) =>
+              RequireAuth(routeName: AppRoutes.profile, child: const ProfilePage()),
+          AppRoutes.settings: (_) =>
+              RequireAuth(routeName: AppRoutes.settings, child: const SettingsPage()),
+
+          AppRoutes.voituresList: (_) => RequireAuth(
+              routeName: AppRoutes.voituresList,
+              child: _wrap('Liste des voitures', AppRoutes.voituresList, const Listevoitures())),
+          AppRoutes.voituresAdd: (_) => RequireAuth(
+              routeName: AppRoutes.voituresAdd,
+              child: _wrap('Ajouter voiture', AppRoutes.voituresAdd, const AjoutervoiturePage())),
+          AppRoutes.voituresEdit: (_) => RequireAuth(
+              routeName: AppRoutes.voituresEdit,
+              child: _wrap('Modifier voiture', AppRoutes.voituresList, const VoitureEditPage())),
+          AppRoutes.voituresFrais: (_) => RequireAuth(
+              routeName: AppRoutes.voituresFrais,
+              child: _wrap('Liste des frais', AppRoutes.voituresFrais, const FraisVoiturePage())),
+          AppRoutes.voitureDetails: (_) => RequireAuth(
+              routeName: AppRoutes.voitureDetails,
+              child: _wrap('Détails voiture', AppRoutes.voituresList, const CarDetailsPage())),
+
+          AppRoutes.paiementsHistory: (_) =>
+              RequireAuth(routeName: AppRoutes.paiementsHistory, child: const PaiementsHistoryPage()),
+
+          AppRoutes.chauffeursList: (_) => RequireAuth(
+              routeName: AppRoutes.chauffeursList,
+              child: _wrap('Liste des chauffeurs', AppRoutes.chauffeursList, const ListeChauffeursPage())),
+          AppRoutes.chauffeursAdd: (_) =>
+              RequireAuth(routeName: AppRoutes.chauffeursAdd, child: const ChauffeursAddPage()),
+
+          AppRoutes.societesList: (_) => RequireAuth(
+              routeName: AppRoutes.societesList,
+              child: _wrap('Liste des sociétés', AppRoutes.societesList, const Listesocietes())),
+          AppRoutes.societesAdd: (_) =>
+              RequireAuth(routeName: AppRoutes.societesAdd, child: const Ajoutersociete()),
+
+          AppRoutes.missionsCreate: (_) => RequireAuth(
+              routeName: AppRoutes.missionsCreate,
+              child: _wrap('Nouvel ordre de mission', AppRoutes.missionsCreate, const OrdreMissionFormPage())),
+
+          AppRoutes.superAdminAddAdmin: (_) =>
+              RequireAuth(routeName: AppRoutes.superAdminAddAdmin, child: const AddAdminPage()),
+          AppRoutes.superDocordremision: (_) =>
+              RequireAuth(routeName: AppRoutes.superDocordremision, child: const Docordremision()),
+        },
     );
   }
 }
