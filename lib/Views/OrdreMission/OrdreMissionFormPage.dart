@@ -358,13 +358,25 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
   }
 
   // ---------- Submit ----------
+// ---------- Submit ----------
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // 🔹 Récupérer l'utilisateur connecté pour fallback
+    final currentUser = await _getCurrentUser();
+
+    // 🔹 Fallback intelligent pour chauffeurNom
+    final chauffeurNomFinal = (_chauffeurNom?.trim().isNotEmpty ?? false)
+        ? _chauffeurNom!.trim()
+        : (currentUser?.nomComplet?.trim().isNotEmpty ?? false)
+        ? currentUser!.nomComplet!.trim()
+        : 'Inconnu';
+
+    // 🔹 Construction du body à envoyer
     final body = {
       'voitureId': _voitureId,
       'chauffeurId': _chauffeurId,
-      'chauffeurNom': _chauffeurNom, // ✅ ajouté pour cohérence backend
+      'chauffeurNom': chauffeurNomFinal, // ✅ Toujours rempli
       'lieuDepart': _lieuDepart.text.trim(),
       'destination': _destination.text.trim(),
       'objet': _objet.text.trim(),
@@ -390,11 +402,11 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
       if (res.statusCode == 201) {
         final ordre = Map<String, dynamic>.from(res.data as Map);
 
-        // Générer le PDF
+        // ✅ PDF génération
         final bytes = await _buildPdf(ordre);
         final base64Pdf = convert.base64Encode(bytes);
 
-        // Sauvegarde PDF
+        // ✅ Sauvegarde du PDF côté backend (optionnelle)
         if (_voitureId != null) {
           try {
             await _dio.post(
