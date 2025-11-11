@@ -209,7 +209,7 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
         _voitureLibelle = (choice['libelle'] ?? '').toString();
       });
 
-      // 🚀 Charger le chauffeur lié
+      // 🚀 Charger le chauffeur lié à cette voiture
       try {
         final chauffeurRes = await _dio.get(
           'Chauffeur/voiture/${_voitureId}',
@@ -220,8 +220,13 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
           if (ch['id'] != null) {
             setState(() {
               _chauffeurId = ch['id'];
-              _chauffeurNom = ch['nomComplet'] ??
-                  '${ch['prenom'] ?? ''} ${ch['nom'] ?? ''}'.trim();
+              _chauffeurNom = (ch['nomComplet'] ??
+                  '${ch['prenom'] ?? ''} ${ch['nom'] ?? ''}')
+                  .toString()
+                  .trim();
+              if (_chauffeurNom == null || _chauffeurNom!.isEmpty) {
+                _chauffeurNom = 'Inconnu';
+              }
             });
           }
         }
@@ -307,28 +312,11 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
     if (choice != null) {
       setState(() {
         _chauffeurId = choice['id'] as int;
-        _chauffeurNom = (choice['nom'] ?? '').toString();
-      });
-
-      // 🚀 Charger la voiture associée à ce chauffeur
-      try {
-        final voitureRes = await _dio.get(
-          'Chauffeur/chauffeur/${_chauffeurId}',
-          options: Options(headers: headers),
-        );
-        if (voitureRes.statusCode == 200 && voitureRes.data != null) {
-          final v = Map<String, dynamic>.from(voitureRes.data);
-          if (v['id'] != null) {
-            setState(() {
-              _voitureId = v['id'];
-              _voitureMatricule = v['matricule'];
-              _voitureLibelle = v['libelle'] ?? "${v['marque']} ${v['modele']}";
-            });
-          }
+        _chauffeurNom = (choice['nom'] ?? '').toString().trim();
+        if (_chauffeurNom == null || _chauffeurNom!.isEmpty) {
+          _chauffeurNom = 'Inconnu';
         }
-      } catch (e) {
-        debugPrint('⚠️ Erreur voiture: $e');
-      }
+      });
     }
   }
 
@@ -362,15 +350,10 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // 🔹 Récupère l'utilisateur connecté (pour vérification éventuelle)
-    final currentUser = await _getCurrentUser();
+    // ✅ Toujours utiliser le chauffeur choisi
+    final chauffeurNomFinal =
+    (_chauffeurNom?.trim().isNotEmpty ?? false) ? _chauffeurNom!.trim() : 'Inconnu';
 
-    // ✅ On se base uniquement sur le chauffeur choisi dans le formulaire
-    final chauffeurNomFinal = (_chauffeurNom?.trim().isNotEmpty ?? false)
-        ? _chauffeurNom!.trim()
-        : 'Inconnu';
-
-    // 🔹 Construction du body à envoyer
     final body = {
       'voitureId': _voitureId,
       'chauffeurId': _chauffeurId,
@@ -400,11 +383,9 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
       if (res.statusCode == 201) {
         final ordre = Map<String, dynamic>.from(res.data as Map);
 
-        // ✅ PDF génération
         final bytes = await _buildPdf(ordre);
         final base64Pdf = convert.base64Encode(bytes);
 
-        // ✅ Sauvegarde du PDF côté backend (optionnelle)
         if (_voitureId != null) {
           try {
             await _dio.post(
@@ -416,9 +397,8 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
               },
               options: Options(headers: headers),
             );
-            debugPrint('✅ PDF enregistré côté backend');
           } catch (e) {
-            debugPrint('⚠️ Erreur enregistrement PDF: $e');
+            debugPrint('⚠️ Erreur PDF: $e');
           }
         }
 
