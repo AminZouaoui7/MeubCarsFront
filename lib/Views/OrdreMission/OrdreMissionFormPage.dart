@@ -362,31 +362,19 @@ class _OrdreMissionFormPageState extends State<OrdreMissionFormPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // 🔹 Récupérer l'utilisateur connecté (uniquement pour debug ou fallback extrême)
+    // 🔹 Récupère l'utilisateur connecté (pour vérification éventuelle)
     final currentUser = await _getCurrentUser();
 
-    // ✅ Assurer que _chauffeurNom contient toujours le nom choisi
-    // Si pas encore défini (ex: choisi via voiture sans nomComplet), on essaie de le reconstruire
-    String chauffeurNomFinal = '';
-    if (_chauffeurNom != null && _chauffeurNom!.trim().isNotEmpty) {
-      chauffeurNomFinal = _chauffeurNom!.trim();
-    } else {
-      chauffeurNomFinal =
-      (currentUser?.nomComplet?.trim().isNotEmpty ?? false)
-          ? currentUser!.nomComplet!.trim()
-          : 'Inconnu';
-    }
-
-    // 🔹 Log pour vérifier ce qui est envoyé
-    debugPrint('🚗 [SUBMIT] chauffeurNomFinal: $chauffeurNomFinal');
-    debugPrint('🚗 [SUBMIT] chauffeurId: $_chauffeurId');
-    debugPrint('🚗 [SUBMIT] voitureId: $_voitureId');
+    // ✅ On se base uniquement sur le chauffeur choisi dans le formulaire
+    final chauffeurNomFinal = (_chauffeurNom?.trim().isNotEmpty ?? false)
+        ? _chauffeurNom!.trim()
+        : 'Inconnu';
 
     // 🔹 Construction du body à envoyer
     final body = {
       'voitureId': _voitureId,
       'chauffeurId': _chauffeurId,
-      'chauffeurNom': chauffeurNomFinal, // ✅ Toujours rempli correctement
+      'chauffeurNom': chauffeurNomFinal,
       'lieuDepart': _lieuDepart.text.trim(),
       'destination': _destination.text.trim(),
       'objet': _objet.text.trim(),
